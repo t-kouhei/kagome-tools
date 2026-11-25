@@ -21,6 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - run: python -m pip install -r docs-requirements.txt
       - run: python build.py
       - run: python scripts/verify_package.py
       - run: python -m pip install numpy scipy pytest
@@ -29,8 +30,9 @@ jobs:
       - name: Prepare public files
         run: |
           mkdir _site
-          cp index.html app.html usage.html principles.html guide.html demonstration.html icon.svg engine.zip desktop-tool.zip source-manifest.json browser_adapter.py web-bridge.js worker.mjs sw.js _site/
+          cp index.html app.html usage.html principles.html guide.html demonstration.html specification.html 仕様書.md icon.svg engine.zip desktop-tool.zip source-manifest.json browser_adapter.py web-bridge.js worker.mjs sw.js _site/
           cp -r assets _site/
+          cp -r docs _site/
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:

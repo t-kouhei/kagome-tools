@@ -3,6 +3,7 @@ from pathlib import Path
 import hashlib
 import json
 import zipfile
+from scripts.render_specification import render as render_specification
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / 'engine' / 'kagome_lattice'
@@ -10,6 +11,7 @@ ALLOWED = {'.py', '.html', '.css', '.js'}
 
 
 def build():
+    render_specification()
     release = json.loads((ROOT / 'release.json').read_text(encoding='utf-8'))
     files = sorted(p for p in SOURCE.iterdir() if p.is_file() and p.suffix in ALLOWED)
     manifest = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
@@ -21,7 +23,10 @@ def build():
             archive.write(path, 'kagome_lattice/' + path.name)
         archive.writestr('requirements.txt', 'numpy\nscipy\nmatplotlib\n')
         archive.writestr('run.bat', '@echo off\r\ncd /d "%~dp0"\r\npython -m kagome_lattice.gui\r\npause\r\n')
-        archive.writestr('README.txt', 'Python 3.11+ is required.\nInstall: python -m pip install -r requirements.txt\nStart: python -m kagome_lattice.gui\nProfiles: --profile patent / --profile traffic\n')
+        archive.writestr('README.txt', '最初に「仕様書.html」を開くと、目的・用語・入力・計算・結果の読み方を順に確認できます。\n\nPython 3.11以降を用意し、このフォルダで依存を導入します。\npython -m pip install -r requirements.txt\n\nrun.bat、または次のコマンドで起動します。\npython -m kagome_lattice.gui\n\n版の指定：--profile patent（汎用） / --profile traffic（交通）\n')
+        archive.write(ROOT / 'specification.html', '仕様書.html')
+        archive.write(ROOT / '仕様書.md', '仕様書.md')
+        archive.write(ROOT / 'docs/specification/kagome-structure.svg', 'docs/specification/kagome-structure.svg')
     page = (SOURCE / 'editor.html').read_text(encoding='utf-8')
     page = page.replace('href="/assets/editor.css"', 'href="./assets/editor.css"')
     page = page.replace("const API_TOKEN='__TOKEN__',INITIAL_PROFILE='__PROFILE__';", "const API_TOKEN='',INITIAL_PROFILE=new URLSearchParams(location.search).get('profile')==='traffic'?'traffic':'patent';")
@@ -42,6 +47,7 @@ def build():
             document = document.replace('<main id="main">', '<main id="main"><div style="padding:18px;background:#e7f2ef;border-radius:12px;margin-bottom:20px"><strong>ブラウザ版の使い方</strong><p>公開URLから起動できます。下記のWindows用起動操作はPython版向けです。画面の入力・解析・比較は共通です。入力と結果はこのブラウザに保存され、他の端末へは自動同期されません。大切なデータはJSON・ZIPでも保存してください。</p><a href="./">ツール一覧へ戻る</a></div>')
         (ROOT / name).write_text(document, encoding='utf-8')
     page = page.replace('ローカルワークスペース', 'ブラウザ内ワークスペース')
+    page = page.replace('<div class="sidebar-bottom">', '<div class="sidebar-bottom"><a href="./specification.html" target="_blank" rel="noopener">仕様書（はじめから読む） ↗</a>', 1)
     page = page.replace('</head>', '<link rel="icon" href="./icon.svg"></head>', 1)
     page = page.replace('<body>', '<body><div id="webLoading" role="status" style="position:fixed;inset:0;z-index:9999;background:#f3f6f7;display:grid;place-items:center;padding:24px"><div style="max-width:540px"><h1 style="font-size:26px">カゴメ解析を準備しています</h1><p id="webLoadingText">初回は計算環境を読み込みます。少しお待ちください。</p><p style="font-size:14px">入力と計算結果は、このブラウザに保存します。大切な結果はZIPやJSONでも保存してください。</p><button id="webRetry" hidden onclick="location.reload()">再読み込み</button><p><a href="./">ツール一覧へ戻る</a></p></div></div>')
     (ROOT / 'app.html').write_text(page, encoding='utf-8')

@@ -2,6 +2,8 @@
 
 汎用版と交通版を同じURLから利用するためのGitHub Pages配信リポジトリ。
 
+初めて読む場合は[仕様書（目的・入力・計算・結果の読み方）](https://t-kouhei.github.io/kagome-tools/specification.html)から。原文は[仕様書.md](仕様書.md)。同じ原文から目次付きHTMLを生成する。
+
 ## 機能
 
 v1.0.2の共通Python計算コードと入力画面を使用し、PyodideのWorkerで計算する。
@@ -19,6 +21,7 @@ v1.0.2の共通Python計算コードと入力画面を使用し、PyodideのWork
 ## ビルドと確認
 
 ```text
+python -m pip install -r docs-requirements.txt
 python build.py
 python -m http.server 8080
 ```

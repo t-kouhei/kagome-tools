@@ -22,6 +22,9 @@ compile((ROOT / 'browser_adapter.py').read_text(encoding='utf-8'), 'browser_adap
 with zipfile.ZipFile(ROOT / 'engine.zip') as archive:
     assert set(archive.namelist()) == {'kagome_lattice/' + name for name in manifest['files']}
     assert not any(name.lower().endswith(('.pdf', '.pptx', '.mp4', '.csv')) for name in archive.namelist())
+with zipfile.ZipFile(ROOT / 'desktop-tool.zip') as archive:
+    assert archive.read('仕様書.md') == (ROOT / '仕様書.md').read_bytes()
+    assert archive.read('仕様書.html') == (ROOT / 'specification.html').read_bytes()
 
 
 class Links(HTMLParser):
@@ -37,7 +40,7 @@ class Links(HTMLParser):
             assert path.exists(), value
 
 
-for name in ('index.html', 'app.html', 'usage.html', 'principles.html', 'guide.html', 'demonstration.html'):
+for name in ('index.html', 'app.html', 'usage.html', 'principles.html', 'guide.html', 'demonstration.html', 'specification.html'):
     Links().feed((ROOT / name).read_text(encoding='utf-8'))
 assert manifest['basic_rotation_formula_changed'] is False
 print(f'PASS: {len(manifest["files"])} release files, unchanged lattice engine, package contents, Python syntax, and public HTML links.')
