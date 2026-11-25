@@ -533,10 +533,12 @@ if(Object.keys(L).length){
 const G=D.ops.global;
 if(G&&G.rule==="direction"){const ld=G.load;
   $("global").innerHTML=`<p class="note">向きごとの総交通量が道路インフラ限界を超えないように、全部の入口を同じ割合で上げていき、限界に達した向きに流れ込む入口から止める（資料 p.16 の限界を使う）。</p>`+
-  `<div class="detail"><dl><dt>入りたい量</dt><dd>${fmt(G.requested,1)}</dd><dt>入れた量</dt><dd><strong>${fmt(G.admitted_total,1)}</strong>（${fmt(100*G.admitted_total/(G.requested||1),1)}%）</dd><dt>限界に達した向き</dt><dd>${G.tight.length?G.tight.map(d=>d+" "+RN[d]).join("、"):"なし"}</dd></dl></div>`+
-  "<div class='tbl'><table><tr><th>向き</th><th>限界</th><th>入れる前</th><th>入れた後</th></tr>"+
+    `<div class="detail"><dl><dt>入口の要求量</dt><dd id="admissionRequested">${fmt(G.requested,1)}</dd><dt>入口の受入量</dt><dd><strong id="admissionAccepted">${fmt(G.admitted_total,1)}</strong>（${fmt(100*G.admitted_total/(G.requested||1),1)}%）</dd><dt>入口の未受入量</dt><dd id="admissionRejected">${fmt(G.rejected_total,1)}</dd><dt>上限に達した内部の向き</dt><dd>${G.tight.length?G.tight.map(d=>d+" "+RN[d]).join("、"):"なし"}</dd></dl></div>`+
+    "<h3>内部の方向別区間合計（余白を含む全体）</h3><div class='tbl'><table id='directionLoadTable'><tr><th>向き</th><th>標準総量</th><th>調整前</th><th>調整後</th></tr>"+
   Object.entries(ld).map(([d,v])=>`<tr><td>${d} ${RN[d]}</td><td>${fmt(v.limit,1)}</td><td>${fmt(v.before,1)}</td><td>${fmt(v.after,1)}</td></tr>`).join("")+"</table></div>"+
-  "<p class='note'>総交通量は向きごとの素辺の交通量の和。どの素辺が臨界を超えるかはローカルで扱う。</p>";
+    "<h3>入口の向きごとの受入量</h3><div class='tbl'><table id='entranceAdmissionTable'><tr><th>向き</th><th>要求量</th><th>受入量</th><th>未受入量</th></tr>"+
+    Object.entries(G.by_direction).map(([d,v])=>`<tr data-direction="${d}"><td>${d} ${RN[d]}</td><td>${fmt(v.demand,1)}</td><td>${fmt(v.admitted,1)}</td><td>${fmt(v.rejected,1)}</td></tr>`).join("")+"</table></div>"+
+    "<p class='note'>入口の量と、内部の方向別区間合計は別の指標です。区間合計は同じ流れが複数の素辺を通れば各区間で数えます。入口の要求量0は外部供給を0にする設定で、経路や標準容量は残ります。方向別合計が基準内でも個々の素辺で容量を超える場合があるため、局所の超過も確認します。内部調整を併用した場合、この表は入口調整時点の記録です。</p>";
 } else if(G){const bd=G.by_direction;
   $("global").innerHTML=`<p class="note">全体の最大流で、全部の入口を同じ割合で上げていき、詰まった入口から順に止める。出口は${G.exits==="keep"?"今の配分のまま":"どこから出てもよい"}。</p>`+
   `<div class="detail"><dl><dt>入りたい量</dt><dd>${fmt(G.requested,1)}</dd><dt>入れた量</dt><dd><strong>${fmt(G.admitted_total,1)}</strong>（${fmt(100*G.admitted_total/(G.requested||1),1)}%）</dd>`+

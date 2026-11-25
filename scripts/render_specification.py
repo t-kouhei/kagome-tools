@@ -1,5 +1,6 @@
 """Render the single Markdown specification as a portable Japanese HTML book."""
 import base64
+import json
 from pathlib import Path
 import re
 
@@ -8,7 +9,7 @@ import markdown
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def render(source_name='仕様書.md', output_name='specification.html', title='カゴメ解析ツール 仕様書', updated='2026年11月25日'):
+def render(source_name='仕様書.md', output_name='specification.html', title='カゴメ解析ツール 仕様書', updated='2026年11月26日'):
     source = (ROOT / source_name).read_text(encoding='utf-8')
     document = markdown.Markdown(extensions=['tables', 'fenced_code', 'toc', 'sane_lists'],
                                  extension_configs={'toc': {'toc_depth': '2-3'}})
@@ -23,6 +24,8 @@ def render(source_name='仕様書.md', output_name='specification.html', title='
     html = '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="カゴメ解析ツールの目的、用語、入力、計算、基準との比較を最初から説明する仕様書。"><title>カゴメ解析ツール 仕様書</title><style>' + style + '</style></head><body><div class="layout"><aside><p class="brand">KAGOME / SPECIFICATION</p><details id="contents" open><summary>仕様書の目次</summary>' + document.toc + '</details><div class="actions"><a href="./">ツール一覧</a><a href="./仕様書.md">Markdown原文</a><button onclick="window.print()">印刷・PDF保存</button></div></aside><article>' + body + '<p class="foot">対象 v1.0.2 ／ 文書更新 2026年11月25日 ／ 本文と図はこのHTML内に保存されています。</p></article></div><script>if(matchMedia("(max-width:980px)").matches)document.getElementById("contents").open=false;</script></body></html>'
     html = html.replace('href="./">ツール一覧', 'href="https://t-kouhei.github.io/kagome-tools/">ツール一覧')
     html = html.replace('<title>カゴメ解析ツール 仕様書</title>', '<title>' + title + '</title>')
+    version = json.loads((ROOT / 'release.json').read_text(encoding='utf-8'))['application_version']
+    html = html.replace('対象 v1.0.2', '対象 v' + version)
     html = html.replace('文書更新 2026年11月25日', '文書更新 ' + updated)
     if source_name != '仕様書.md':
         html = html.replace('仕様書の目次', '完成確認の目次').replace('KAGOME / SPECIFICATION', 'KAGOME / COMPLETION REVIEW')

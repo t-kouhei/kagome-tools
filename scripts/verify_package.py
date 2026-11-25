@@ -27,6 +27,9 @@ with zipfile.ZipFile(ROOT / 'desktop-tool.zip') as archive:
     assert archive.read('仕様書.html') == (ROOT / 'specification.html').read_bytes()
     assert archive.read('完成確認.md') == (ROOT / '完成確認.md').read_bytes()
     assert archive.read('完成確認.html') == (ROOT / 'completion.html').read_bytes()
+    for name in ('low.json', 'high.json', 'direction-6-off.json', 'README.md'):
+        path = 'examples/admission/' + name
+        assert archive.read(path) == (ROOT / path).read_bytes(), path
 
 
 class Links(HTMLParser):

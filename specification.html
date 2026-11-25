@@ -8,6 +8,7 @@
 <li><a href="#4-2">4 入力方法は2通りある</a><ul>
 <li><a href="#41">4.1 各経路の量を直接入れる</a></li>
 <li><a href="#42">4.2 入口の量から内部の流れを求める</a></li>
+<li><a href="#43">4.3 解析範囲と外側との出入りを決める</a></li>
 </ul>
 </li>
 <li><a href="#5">5 何の数字を入力するか</a><ul>
@@ -23,6 +24,8 @@
 <li><a href="#7">7 標準状態と容量をどう作るか</a><ul>
 <li><a href="#71-f">7.1 分布値fと臨界量</a></li>
 <li><a href="#72">7.2 基本の容量と標準状態</a></li>
+<li><a href="#73">7.3 標準状態を使って、入口で受け入れる量を決める</a></li>
+<li><a href="#74">7.4 入口調整を確かめる数値例</a></li>
 </ul>
 </li>
 <li><a href="#8">8 結果は何と比べるか</a><ul>
@@ -59,7 +62,7 @@
 </ul>
 </div>
 </details><div class="actions"><a href="https://t-kouhei.github.io/kagome-tools/">ツール一覧</a><a href="./仕様書.md">Markdown原文</a><button onclick="window.print()">印刷・PDF保存</button></div></aside><article><h1 id="_1">カゴメ解析ツール 仕様書</h1>
-<p>対象は <strong>v1.0.2</strong>。文書の更新日は2026年11月25日です。</p>
+<p>対象は <strong>v1.0.3</strong>。文書の更新日は2026年11月26日です。</p>
 <p>初めてこのツールに触れる人が、目的、入力、計算、結果の読み方を順に理解できるように説明します。第1～9章で基本をつかみ、第10章以降で保存方法や詳細な仕様を確認できます。</p>
 <h2 id="1">1 このツールは何をするものか</h2>
 <p><strong>カゴメ構造の経路に数値を入れ、流れと回転量を計算し、基準や変更前の状態と比較するソフトです。</strong></p>
@@ -67,7 +70,7 @@
 <p>中心となるのは用途に依存しない共通モデルです。交通版は、その共通パラメータを車線数・道路長・交通量などの言葉で表示する適用例です。画面で「特許版（基本解析）」と呼んでいるものが汎用版に当たります。版を切り替えても、入力した数値や計算式は変わりません。</p>
 <p>利用者は「この量を何と対応させるか」「どの単位を使うか」「どの結果を望ましいとするか」を決めます。一方、計算式と入力の制約はソフトで定めます。物理的な意味を変えるときも、単位と関係式の整合を確認します。</p>
 <p>基本の使い方は次の流れです。</p>
-<p><strong>格子を用意する → 条件を入力する → 計算する → 基準や変更前と比べる → 保存する</strong></p>
+<p><strong>解析範囲と入口条件を決める → 内部の条件を入力する → 標準を作る → 必要なら入口の受入量を調整する → 内部の流れ・回転量を計算する → 比較して保存する</strong></p>
 <h2 id="2">2 最初に覚える言葉</h2>
 <p><img alt="実装と同じ接続で描いたカゴメ格子" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgMzc1IiByb2xlPSJpbWciIGFyaWEtbGFiZWxsZWRieT0idGl0bGUgZGVzYyI+PHRpdGxlIGlkPSJ0aXRsZSI+5LiJ6KeS5b2i44Go5YWt6KeS5b2i44GL44KJ44Gq44KL44Kr44K044Oh5qC85a2QPC90aXRsZT48ZGVzYyBpZD0iZGVzYyI+5a6f6KOF44GuTj0044Gu5qC85a2Q44GL44KJ5L2c5oiQ44CC56+A54K544KS54K544CB57WM6Lev44KS57ea44Gn56S644GZ44CC6Kqs5piO44Gu44Gf44KB6Ly46YCB5pa55ZCR44Go5YWl5Yqb5YCk44Gv55yB55Wl44CCPC9kZXNjPjxyZWN0IHg9IjEiIHk9IjEiIHdpZHRoPSI3OTgiIGhlaWdodD0iMzczIiByeD0iMTIiIGZpbGw9IiNmNmZhZjgiIHN0cm9rZT0iI2Q3ZTRkZSIvPjxsaW5lIHgxPSI1NS4wMDAiIHkxPSIyODIuMTQzIiB4Mj0iOTguNzE0IiB5Mj0iMjgyLjE0MyIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSI1NS4wMDAiIHkxPSIyODIuMTQzIiB4Mj0iNzYuODU3IiB5Mj0iMzIwLjAwMCIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIxNDIuNDI3IiB5MT0iMjgyLjE0MyIgeDI9IjE4Ni4xNDEiIHkyPSIyODIuMTQzIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjE0Mi40MjciIHkxPSIyODIuMTQzIiB4Mj0iMTIwLjU3MCIgeTI9IjI0NC4yODYiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMTQyLjQyNyIgeTE9IjI4Mi4xNDMiIHgyPSI5OC43MTQiIHkyPSIyODIuMTQzIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjE0Mi40MjciIHkxPSIyODIuMTQzIiB4Mj0iMTY0LjI4NCIgeTI9IjMyMC4wMDAiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMjI5Ljg1NSIgeTE9IjI4Mi4xNDMiIHgyPSIyNzMuNTY4IiB5Mj0iMjgyLjE0MyIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIyMjkuODU1IiB5MT0iMjgyLjE0MyIgeDI9IjIwNy45OTgiIHkyPSIyNDQuMjg2IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjIyOS44NTUiIHkxPSIyODIuMTQzIiB4Mj0iMTg2LjE0MSIgeTI9IjI4Mi4xNDMiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMjI5Ljg1NSIgeTE9IjI4Mi4xNDMiIHgyPSIyNTEuNzExIiB5Mj0iMzIwLjAwMCIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIzMTcuMjgyIiB5MT0iMjgyLjE0MyIgeDI9IjM2MC45OTYiIHkyPSIyODIuMTQzIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjMxNy4yODIiIHkxPSIyODIuMTQzIiB4Mj0iMjk1LjQyNSIgeTI9IjI0NC4yODYiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMzE3LjI4MiIgeTE9IjI4Mi4xNDMiIHgyPSIyNzMuNTY4IiB5Mj0iMjgyLjE0MyIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIzMTcuMjgyIiB5MT0iMjgyLjE0MyIgeDI9IjMzOS4xMzkiIHkyPSIzMjAuMDAwIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9Ijk4LjcxNCIgeTE9IjIwNi40MjkiIHgyPSIxNDIuNDI3IiB5Mj0iMjA2LjQyOSIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSI5OC43MTQiIHkxPSIyMDYuNDI5IiB4Mj0iMTIwLjU3MCIgeTI9IjI0NC4yODYiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMTg2LjE0MSIgeTE9IjIwNi40MjkiIHgyPSIyMjkuODU1IiB5Mj0iMjA2LjQyOSIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIxODYuMTQxIiB5MT0iMjA2LjQyOSIgeDI9IjE2NC4yODQiIHkyPSIxNjguNTcxIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjE4Ni4xNDEiIHkxPSIyMDYuNDI5IiB4Mj0iMTQyLjQyNyIgeTI9IjIwNi40MjkiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMTg2LjE0MSIgeTE9IjIwNi40MjkiIHgyPSIyMDcuOTk4IiB5Mj0iMjQ0LjI4NiIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIyNzMuNTY4IiB5MT0iMjA2LjQyOSIgeDI9IjMxNy4yODIiIHkyPSIyMDYuNDI5IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjI3My41NjgiIHkxPSIyMDYuNDI5IiB4Mj0iMjUxLjcxMSIgeTI9IjE2OC41NzEiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMjczLjU2OCIgeTE9IjIwNi40MjkiIHgyPSIyMjkuODU1IiB5Mj0iMjA2LjQyOSIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIyNzMuNTY4IiB5MT0iMjA2LjQyOSIgeDI9IjI5NS40MjUiIHkyPSIyNDQuMjg2IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjM2MC45OTYiIHkxPSIyMDYuNDI5IiB4Mj0iNDA0LjcwOSIgeTI9IjIwNi40MjkiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMzYwLjk5NiIgeTE9IjIwNi40MjkiIHgyPSIzMzkuMTM5IiB5Mj0iMTY4LjU3MSIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIzNjAuOTk2IiB5MT0iMjA2LjQyOSIgeDI9IjMxNy4yODIiIHkyPSIyMDYuNDI5IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjM2MC45OTYiIHkxPSIyMDYuNDI5IiB4Mj0iMzgyLjg1MiIgeTI9IjI0NC4yODYiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMTQyLjQyNyIgeTE9IjEzMC43MTQiIHgyPSIxODYuMTQxIiB5Mj0iMTMwLjcxNCIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIxNDIuNDI3IiB5MT0iMTMwLjcxNCIgeDI9IjE2NC4yODQiIHkyPSIxNjguNTcxIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjIyOS44NTUiIHkxPSIxMzAuNzE0IiB4Mj0iMjczLjU2OCIgeTI9IjEzMC43MTQiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMjI5Ljg1NSIgeTE9IjEzMC43MTQiIHgyPSIyMDcuOTk4IiB5Mj0iOTIuODU3IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjIyOS44NTUiIHkxPSIxMzAuNzE0IiB4Mj0iMTg2LjE0MSIgeTI9IjEzMC43MTQiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMjI5Ljg1NSIgeTE9IjEzMC43MTQiIHgyPSIyNTEuNzExIiB5Mj0iMTY4LjU3MSIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIzMTcuMjgyIiB5MT0iMTMwLjcxNCIgeDI9IjM2MC45OTYiIHkyPSIxMzAuNzE0IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjMxNy4yODIiIHkxPSIxMzAuNzE0IiB4Mj0iMjk1LjQyNSIgeTI9IjkyLjg1NyIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIzMTcuMjgyIiB5MT0iMTMwLjcxNCIgeDI9IjI3My41NjgiIHkyPSIxMzAuNzE0IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjMxNy4yODIiIHkxPSIxMzAuNzE0IiB4Mj0iMzM5LjEzOSIgeTI9IjE2OC41NzEiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNDA0LjcwOSIgeTE9IjEzMC43MTQiIHgyPSI0NDguNDIzIiB5Mj0iMTMwLjcxNCIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSI0MDQuNzA5IiB5MT0iMTMwLjcxNCIgeDI9IjM4Mi44NTIiIHkyPSI5Mi44NTciIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNDA0LjcwOSIgeTE9IjEzMC43MTQiIHgyPSIzNjAuOTk2IiB5Mj0iMTMwLjcxNCIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSI0MDQuNzA5IiB5MT0iMTMwLjcxNCIgeDI9IjQyNi41NjYiIHkyPSIxNjguNTcxIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjE4Ni4xNDEiIHkxPSI1NS4wMDAiIHgyPSIyMjkuODU1IiB5Mj0iNTUuMDAwIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjE4Ni4xNDEiIHkxPSI1NS4wMDAiIHgyPSIyMDcuOTk4IiB5Mj0iOTIuODU3IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjI3My41NjgiIHkxPSI1NS4wMDAiIHgyPSIzMTcuMjgyIiB5Mj0iNTUuMDAwIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjI3My41NjgiIHkxPSI1NS4wMDAiIHgyPSIyMjkuODU1IiB5Mj0iNTUuMDAwIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjI3My41NjgiIHkxPSI1NS4wMDAiIHgyPSIyOTUuNDI1IiB5Mj0iOTIuODU3IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjM2MC45OTYiIHkxPSI1NS4wMDAiIHgyPSI0MDQuNzA5IiB5Mj0iNTUuMDAwIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjM2MC45OTYiIHkxPSI1NS4wMDAiIHgyPSIzMTcuMjgyIiB5Mj0iNTUuMDAwIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjM2MC45OTYiIHkxPSI1NS4wMDAiIHgyPSIzODIuODUyIiB5Mj0iOTIuODU3IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjQ0OC40MjMiIHkxPSI1NS4wMDAiIHgyPSI0OTIuMTM3IiB5Mj0iNTUuMDAwIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjQ0OC40MjMiIHkxPSI1NS4wMDAiIHgyPSI0MDQuNzA5IiB5Mj0iNTUuMDAwIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjQ0OC40MjMiIHkxPSI1NS4wMDAiIHgyPSI0NzAuMjgwIiB5Mj0iOTIuODU3IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9Ijc2Ljg1NyIgeTE9IjMyMC4wMDAiIHgyPSI5OC43MTQiIHkyPSIyODIuMTQzIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjE2NC4yODQiIHkxPSIzMjAuMDAwIiB4Mj0iMTg2LjE0MSIgeTI9IjI4Mi4xNDMiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMjUxLjcxMSIgeTE9IjMyMC4wMDAiIHgyPSIyNzMuNTY4IiB5Mj0iMjgyLjE0MyIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIzMzkuMTM5IiB5MT0iMzIwLjAwMCIgeDI9IjM2MC45OTYiIHkyPSIyODIuMTQzIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjEyMC41NzAiIHkxPSIyNDQuMjg2IiB4Mj0iMTQyLjQyNyIgeTI9IjIwNi40MjkiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMTIwLjU3MCIgeTE9IjI0NC4yODYiIHgyPSI5OC43MTQiIHkyPSIyODIuMTQzIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjIwNy45OTgiIHkxPSIyNDQuMjg2IiB4Mj0iMjI5Ljg1NSIgeTI9IjIwNi40MjkiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMjA3Ljk5OCIgeTE9IjI0NC4yODYiIHgyPSIxODYuMTQxIiB5Mj0iMjgyLjE0MyIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIyOTUuNDI1IiB5MT0iMjQ0LjI4NiIgeDI9IjMxNy4yODIiIHkyPSIyMDYuNDI5IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjI5NS40MjUiIHkxPSIyNDQuMjg2IiB4Mj0iMjczLjU2OCIgeTI9IjI4Mi4xNDMiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMzgyLjg1MiIgeTE9IjI0NC4yODYiIHgyPSI0MDQuNzA5IiB5Mj0iMjA2LjQyOSIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIzODIuODUyIiB5MT0iMjQ0LjI4NiIgeDI9IjM2MC45OTYiIHkyPSIyODIuMTQzIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjE2NC4yODQiIHkxPSIxNjguNTcxIiB4Mj0iMTg2LjE0MSIgeTI9IjEzMC43MTQiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMTY0LjI4NCIgeTE9IjE2OC41NzEiIHgyPSIxNDIuNDI3IiB5Mj0iMjA2LjQyOSIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIyNTEuNzExIiB5MT0iMTY4LjU3MSIgeDI9IjI3My41NjgiIHkyPSIxMzAuNzE0IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjI1MS43MTEiIHkxPSIxNjguNTcxIiB4Mj0iMjI5Ljg1NSIgeTI9IjIwNi40MjkiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMzM5LjEzOSIgeTE9IjE2OC41NzEiIHgyPSIzNjAuOTk2IiB5Mj0iMTMwLjcxNCIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIzMzkuMTM5IiB5MT0iMTY4LjU3MSIgeDI9IjMxNy4yODIiIHkyPSIyMDYuNDI5IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjQyNi41NjYiIHkxPSIxNjguNTcxIiB4Mj0iNDQ4LjQyMyIgeTI9IjEzMC43MTQiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNDI2LjU2NiIgeTE9IjE2OC41NzEiIHgyPSI0MDQuNzA5IiB5Mj0iMjA2LjQyOSIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIyMDcuOTk4IiB5MT0iOTIuODU3IiB4Mj0iMjI5Ljg1NSIgeTI9IjU1LjAwMCIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSIyMDcuOTk4IiB5MT0iOTIuODU3IiB4Mj0iMTg2LjE0MSIgeTI9IjEzMC43MTQiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMjk1LjQyNSIgeTE9IjkyLjg1NyIgeDI9IjMxNy4yODIiIHkyPSI1NS4wMDAiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iMjk1LjQyNSIgeTE9IjkyLjg1NyIgeDI9IjI3My41NjgiIHkyPSIxMzAuNzE0IiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjM4Mi44NTIiIHkxPSI5Mi44NTciIHgyPSI0MDQuNzA5IiB5Mj0iNTUuMDAwIiBzdHJva2U9IiM2OWE5OWIiIHN0cm9rZS13aWR0aD0iMi41Ii8+PGxpbmUgeDE9IjM4Mi44NTIiIHkxPSI5Mi44NTciIHgyPSIzNjAuOTk2IiB5Mj0iMTMwLjcxNCIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSI0NzAuMjgwIiB5MT0iOTIuODU3IiB4Mj0iNDkyLjEzNyIgeTI9IjU1LjAwMCIgc3Ryb2tlPSIjNjlhOTliIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxsaW5lIHgxPSI0NzAuMjgwIiB5MT0iOTIuODU3IiB4Mj0iNDQ4LjQyMyIgeTI9IjEzMC43MTQiIHN0cm9rZT0iIzY5YTk5YiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48Y2lyY2xlIGN4PSI1NS4wMDAiIGN5PSIyODIuMTQzIiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMTQyLjQyNyIgY3k9IjI4Mi4xNDMiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIyMjkuODU1IiBjeT0iMjgyLjE0MyIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjMxNy4yODIiIGN5PSIyODIuMTQzIiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iOTguNzE0IiBjeT0iMjA2LjQyOSIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjE4Ni4xNDEiIGN5PSIyMDYuNDI5IiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMjczLjU2OCIgY3k9IjIwNi40MjkiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIzNjAuOTk2IiBjeT0iMjA2LjQyOSIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjE0Mi40MjciIGN5PSIxMzAuNzE0IiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMjI5Ljg1NSIgY3k9IjEzMC43MTQiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIzMTcuMjgyIiBjeT0iMTMwLjcxNCIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjQwNC43MDkiIGN5PSIxMzAuNzE0IiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMTg2LjE0MSIgY3k9IjU1LjAwMCIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjI3My41NjgiIGN5PSI1NS4wMDAiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIzNjAuOTk2IiBjeT0iNTUuMDAwIiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iNDQ4LjQyMyIgY3k9IjU1LjAwMCIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9Ijc2Ljg1NyIgY3k9IjMyMC4wMDAiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIxNjQuMjg0IiBjeT0iMzIwLjAwMCIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjI1MS43MTEiIGN5PSIzMjAuMDAwIiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMzM5LjEzOSIgY3k9IjMyMC4wMDAiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIxMjAuNTcwIiBjeT0iMjQ0LjI4NiIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjIwNy45OTgiIGN5PSIyNDQuMjg2IiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMjk1LjQyNSIgY3k9IjI0NC4yODYiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIzODIuODUyIiBjeT0iMjQ0LjI4NiIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjE2NC4yODQiIGN5PSIxNjguNTcxIiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMjUxLjcxMSIgY3k9IjE2OC41NzEiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIzMzkuMTM5IiBjeT0iMTY4LjU3MSIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjQyNi41NjYiIGN5PSIxNjguNTcxIiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMjA3Ljk5OCIgY3k9IjkyLjg1NyIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjI5NS40MjUiIGN5PSI5Mi44NTciIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIzODIuODUyIiBjeT0iOTIuODU3IiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iNDcwLjI4MCIgY3k9IjkyLjg1NyIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9Ijk4LjcxNCIgY3k9IjI4Mi4xNDMiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIxODYuMTQxIiBjeT0iMjgyLjE0MyIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjI3My41NjgiIGN5PSIyODIuMTQzIiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMzYwLjk5NiIgY3k9IjI4Mi4xNDMiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIxNDIuNDI3IiBjeT0iMjA2LjQyOSIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjIyOS44NTUiIGN5PSIyMDYuNDI5IiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMzE3LjI4MiIgY3k9IjIwNi40MjkiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSI0MDQuNzA5IiBjeT0iMjA2LjQyOSIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjE4Ni4xNDEiIGN5PSIxMzAuNzE0IiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMjczLjU2OCIgY3k9IjEzMC43MTQiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSIzNjAuOTk2IiBjeT0iMTMwLjcxNCIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjQ0OC40MjMiIGN5PSIxMzAuNzE0IiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iMjI5Ljg1NSIgY3k9IjU1LjAwMCIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjxjaXJjbGUgY3g9IjMxNy4yODIiIGN5PSI1NS4wMDAiIHI9IjQiIGZpbGw9IiMxYjZlNjIiLz48Y2lyY2xlIGN4PSI0MDQuNzA5IiBjeT0iNTUuMDAwIiByPSI0IiBmaWxsPSIjMWI2ZTYyIi8+PGNpcmNsZSBjeD0iNDkyLjEzNyIgY3k9IjU1LjAwMCIgcj0iNCIgZmlsbD0iIzFiNmU2MiIvPjx0ZXh0IHg9IjU1IiB5PSIzNTIiIGZvbnQtZmFtaWx5PSJNZWlyeW8sc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzRmNzI2YyI+54K577yd56+A54K544CA57ea77yd57WM6Lev44CA44CA5LiJ6KeS5b2i44O75YWt6KeS5b2i44Gu5ZGo5Zuy44Gn5Zue6Lui6YeP44KS6KiI566XPC90ZXh0Pjwvc3ZnPgo=" /></p>
 <p>図は実装の格子接続から描いたものです。説明のため矢印と入力値は省いています。</p>
@@ -124,7 +127,7 @@
 <li>「変更前後を比較」で、回転量や容量比の前後を確認します。</li>
 <li>必要な入力はJSON、結果はZIPで書き出します。</li>
 </ol>
-<p><a href="https://t-kouhei.github.io/kagome-tools/app.html?profile=patent&amp;demo=flow&amp;v=1.0.2">操作例を直接開く</a>こともできます。新しい例に置き換える前に、必要な編集を保存してください。既存の保存ケースは残ります。</p>
+<p><a href="https://t-kouhei.github.io/kagome-tools/app.html?profile=patent&amp;demo=flow&amp;v=1.0.3">操作例を直接開く</a>こともできます。新しい例に置き換える前に、必要な編集を保存してください。既存の保存ケースは残ります。</p>
 <h2 id="4-2">4 入力方法は2通りある</h2>
 <h3 id="41">4.1 各経路の量を直接入れる</h3>
 <p>画面では「各素辺の観測流量を使う」を選びます。各素辺のVを利用者が指定し、その値から回転量などを計算します。合成データや、手元の経路別データを調べるときに使えます。</p>
@@ -132,6 +135,10 @@
 <h3 id="42">4.2 入口の量から内部の流れを求める</h3>
 <p>画面では「入口の流入量から計算する」を選びます。外から入る量と、各節点での分岐割合を指定し、内部のVを計算します。このとき、素辺表のVを直接の入力値としては使いません。</p>
 <p>配分を変えたときの流れを調べる場合は、こちらを使います。外へ出られない閉じた循環などがあり、一意な定常解を扱えない入力では計算を停止して理由を示します。</p>
+<h3 id="43">4.3 解析範囲と外側との出入りを決める</h3>
+<p>現在の格子は有限の範囲を切り出したもので、外側に入口と出口があります。入口から計算する方法では、各入口の流入量を指定します。外周から出た流れを反対側の端へ戻す周期境界は使いません。</p>
+<p>「周囲に余白」を選ぶと外側に1リングの格子が付き、そのさらに外周が入口・出口になります。余白の素辺にも値が必要です。余白は内側の局所計算を支える情報であり、外部の流入条件の代わりにはなりません。</p>
+<p><strong>入口のinflowを0にすると、その入口からの外部供給を0にします。</strong> 経路を削除したり、その向きを網全体で通行禁止にする操作ではありません。内部の分岐でほかの向きから曲がり、その方向へ進む流れはあり得ます。標準状態の経路や容量も、入口を0にしただけでは消えません。</p>
 <h2 id="5">5 何の数字を入力するか</h2>
 <p>基本設定の例では、全素辺に次の値を入れます。単位は利用側でそろえます。</p>
 <div class="table-wrap"><table>
@@ -234,6 +241,61 @@ n = V × L / v
 <p>全素辺にcを置き、現在と同じm・L・分岐割合を使って回転量を計算したものが標準状態です。一様な例では、六角形の標準は右750、左450、正味300です。</p>
 <p>この標準は比較用の参照状態です。各節点で流入と流出がつり合う実際の流し方とは区別します。一般の可解格子理論の厳密解を計算したという意味にはしません。</p>
 <p>容量として使うε<em>とcは、<strong>正の有限値</strong>に限定します。μ・Tが正でも、θの取り方によってε</em>が0以下になる場合があり、その入力では容量を使う解析を停止します。</p>
+<p><a id="admission"></a></p>
+<h3 id="73">7.3 標準状態を使って、入口で受け入れる量を決める</h3>
+<p>ここが「格子に入れる／入れない」に対応する処理です。入口から計算する方法で、詳細設定の<strong>「方向別の標準総量に合わせる」</strong>を選びます。初期値は「調整しない」です。観測した各素辺のVを直接使う方法では、この入口調整を適用しません。</p>
+<ol>
+<li>各素辺の臨界量cを計算し、6方向ごとに足して標準総量Cを作る。</li>
+<li>各入口に、外から入れたい要求量を指定する。</li>
+<li>現在の分岐割合のまま流したとき、各方向の区間合計がCを超えないよう、入口の受入量を求める。</li>
+<li>受け入れた量で内部の流れと回転量を計算する。</li>
+</ol>
+<p>入口調整の標準総量と方向別の区間合計は、余白を含む全素辺（all）で集計します。結果画面で内側（inner）だけを表示した数値とは、集計範囲が異なります。</p>
+<p>各入口の要求量に同じ割合を掛けて増やし、ある方向が上限に達したら、その方向の内部負荷を増やす入口の増加を止めます。残る入口は増やし続け、要求量または別の方向の上限まで進めます。入口の向きだけで判断せず、内部の分岐によってどの方向へ流れるかを含めます。</p>
+<p>単なるON/OFFに限らず、「要求6000のうち2000を受け入れる」のように部分的な受け入れを計算します。要求量、受入量、未受入量を分けて保存します。未受入量の待ち行列や、次の時刻への繰越は計算しません。</p>
+<p>標準状態は先に用意する比較基準、入口調整はその基準を使って実際の流し方を試算する処理です。入口調整を選んでも、各素辺のVがすべて標準量になるとは限りません。また、方向別総量が基準内でも、個々の素辺の容量を守れるとは限りません。局所の超過は別途確認します。</p>
+<h3 id="74">7.4 入口調整を確かめる数値例</h3>
+<p>N=3、余白あり、m=2、μ=1000、T=100、θ=0.5とし、入口調整だけを見やすくするため直進100%・右左0%にします。内部の配分調整は「調整しない」です。全38入口が直進で内部に接続し、各素辺の容量はc=2000です。既存の計算機能を確認する合成入力で、先生の指定例としては扱いません。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>入力</th>
+<th style="text-align: right;">外からの要求合計</th>
+<th style="text-align: right;">受入合計</th>
+<th style="text-align: right;">未受入合計</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全38入口に1000ずつ</td>
+<td style="text-align: right;">38000</td>
+<td style="text-align: right;">38000</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>全38入口に6000ずつ</td>
+<td style="text-align: right;">228000</td>
+<td style="text-align: right;">76000</td>
+<td style="text-align: right;">152000</td>
+</tr>
+<tr>
+<td>向き6の9入口は0、ほかの29入口に6000ずつ</td>
+<td style="text-align: right;">174000</td>
+<td style="text-align: right;">58000</td>
+<td style="text-align: right;">116000</td>
+</tr>
+</tbody>
+</table></div>
+<p>2行目では各入口の受入量が2000になります。向き1について、外からの要求は5入口×6000=30000、受け入れは5入口×2000=10000です。一方、内部の向き1は45区間あるため、区間合計は270000から90000へ変わります。標準総量は45×2000=90000です。<strong>入口の量30000→10000と、方向別の区間合計270000→90000は別の数値です。</strong></p>
+<p>3行目では向き6への外部流入が0になります。この例は直進だけなので内部の向き6の流れも0ですが、標準総量は41区間×2000=82000のままです。</p>
+<p>次のJSONを保存し、画面の「保存した入力・ファイルを使う」→「入力JSONを読み込む」から開いて解析できます。必要な編集中の入力は先に保存してください。</p>
+<ul>
+<li><a href="https://t-kouhei.github.io/kagome-tools/examples/admission/low.json" download>全量を受け入れる入力JSON</a></li>
+<li><a href="https://t-kouhei.github.io/kagome-tools/examples/admission/high.json" download>要求量の3分の1を受け入れる入力JSON</a></li>
+<li><a href="https://t-kouhei.github.io/kagome-tools/examples/admission/direction-6-off.json" download>向き6の外部流入を0にした入力JSON</a></li>
+</ul>
+<p>Python版のダウンロードZIPにも、<code>examples/admission/</code>に同じ入力を同梱します。ZIPを展開してから読み込んでください。</p>
+<p>結果の<code>global.csv</code>には方向別の標準総量・調整前後の区間合計・入口の要求／受入／未受入量を、<code>entrances_admitted.csv</code>には入口ごとの受入量・要求量・割合を保存します。<code>report.json</code>の<code>operations.global</code>にも同じ情報があります。入口調整と内部調整を併用した場合、<code>global.csv</code>は入口調整時点の記録であり、内部調整後の最終集計は別に確認します。</p>
 <h2 id="8">8 結果は何と比べるか</h2>
 <h3 id="81">8.1 同じ場所の標準と比べる</h3>
 <p>現在値から、その面自身の標準値を引きます。「その場所の基準より、どれだけ多い・少ないか」を見ます。</p>
@@ -365,7 +427,7 @@ n = V × L / v
 <p><code>inner</code>は解析範囲内の両端を持つ素辺、<code>all</code>は余白を含む全素辺です。六角形の基本集計は、全頂点が解析範囲内にある完全な六角形を対象とします。</p>
 <p>6方向の合計は、その方向を向く<strong>区間ごとの流量の和</strong>です。同じ流れ100が2区間を通れば合計は200になります。入口から入った量100や、経路を通せる最大量とは別の指標です。</p>
 <h2 id="11-5">11 5つの比較例を使う</h2>
-<p><a href="https://t-kouhei.github.io/kagome-tools/app.html?profile=patent&amp;effect=bottleneck&amp;v=1.0.2">比較例を開く</a>と、変える条件と固定する条件を示して、前後を実際に計算できます。</p>
+<p><a href="https://t-kouhei.github.io/kagome-tools/app.html?profile=patent&amp;effect=bottleneck&amp;v=1.0.3">比較例を開く</a>と、変える条件と固定する条件を示して、前後を実際に計算できます。</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -405,7 +467,7 @@ n = V × L / v
 <p>最後の例は、1本だけ細い経路を入れた合成データです。設定した容量条件を満たす結果が得られたことを確認します。ほかの入力でも必ず同じ効果が出る、という意味にはしません。</p>
 <h2 id="12">12 配分調整と仮のスピン積</h2>
 <h3 id="121">12.1 配分調整で試せること</h3>
-<p>入口から計算する方法では、方向別の制限や最大流による受入量、局所の分岐調整を試算できます。局所LPは、設定した容量などの制約のもとで、指定された変更量の目的関数を扱う線形計画です。</p>
+<p>入口から計算する方法では、第7.3節の方向別の制限や、参考として最大流による受入量、局所の分岐調整を試算できます。入口調整が外から受け入れる量を変えるのに対し、内部調整は受け入れた量の配分を変えます。局所LPは、設定した容量などの制約のもとで、指定された変更量の目的関数を扱う線形計画です。</p>
 <p>結果には、解消・未解消、残った超過、停止理由などを表示します。入口の量を減らして超過が減った場合と、同じ入口量で配分を変えた場合を区別できるよう、入口・出口の量も併記します。信号機や実設備へ操作を自動送信する機能は含みません。</p>
 <h3 id="122">12.2 仮のスピン積は参考指標</h3>
 <p>仮の積では、面の正味回転を使い、2面の積や4面の積を求めます。係数・組み合わせ・規格化はソフト側で採用した暫定の規約であり、先生の相互作用エネルギーとして確定したものとは扱いません。</p>
@@ -539,7 +601,7 @@ n = V × L / v
 <p>今回の完成対象は、<strong>汎用のカゴメ構造に条件を入力し、採用式で計算し、比較し、保存できること</strong>です。</p>
 <p>交通は適用例です。SUMOによる実証や実交通データでの効果、用途ごとの物理的な対応付けは、今回の基本ツールの完成条件には加えません。</p>
 <p>先生の理論との対応について、相互作用の具体式・係数・縮約、原資料の一部の添字などは確認事項として保持します。ソフトで採用した規約を先生の確定式や一般の厳密解の証明へ読み替えません。湧き出し・吸い込みの別レイヤー、20・32・64頂点模型などは、今回の基本解析範囲外です。</p>
-<p>検証では、既存203件と追加13件のテスト、公開画面での5種類の比較、保存・復元・ZIP、交通版と汎用版の数値一致、Python版との数値照合を確認しました。これらは実装の確認であり、実対象での有効性の実証とは区別します。</p>
+<p>検証では、既存216件と入口調整の追加5件（計221件）のテスト、画面での5種類の比較と3つの入口調整入力、保存・復元・ZIP、交通版と汎用版の数値一致、Python版との数値照合を確認しました。これらは実装の確認であり、実対象での有効性の実証とは区別します。</p>
 <h2 id="16">16 開発や引き継ぎで確認すること</h2>
 <h3 id="161">16.1 基本以外の計算設定</h3>
 <p><code>norm=k</code>はV/(v×m)、<code>norm=mvl</code>はV×v/(L×m)です。<code>tau=count</code>も比較用に残しています。規格化を変更するとμ・Tの単位も変わるため、明示的な換算を行います。既存ケースの設定を、自動的に新規の基本設定へ置き換えません。</p>
@@ -584,4 +646,4 @@ n = V × L / v
 </tbody>
 </table></div>
 <p>公開用リポジトリは<a href="https://github.com/t-kouhei/kagome-tools">GitHub</a>です。公開版は同じ計算コードをブラウザ内で実行し、公開サーバーへ入力データを送って計算する構成ではありません。</p>
-<p>詳しい画面操作は<a href="https://t-kouhei.github.io/kagome-tools/usage.html">使い方</a>、式と背景は<a href="https://t-kouhei.github.io/kagome-tools/principles.html">原理解説</a>、説明するときは<a href="https://t-kouhei.github.io/kagome-tools/demonstration.html">5分の操作例</a>へ進んでください。</p><p class="foot">対象 v1.0.2 ／ 文書更新 2026年11月25日 ／ 本文と図はこのHTML内に保存されています。</p></article></div><script>if(matchMedia("(max-width:980px)").matches)document.getElementById("contents").open=false;</script></body></html>
+<p>詳しい画面操作は<a href="https://t-kouhei.github.io/kagome-tools/usage.html">使い方</a>、式と背景は<a href="https://t-kouhei.github.io/kagome-tools/principles.html">原理解説</a>、説明するときは<a href="https://t-kouhei.github.io/kagome-tools/demonstration.html">5分の操作例</a>へ進んでください。</p><p class="foot">対象 v1.0.3 ／ 文書更新 2026年11月26日 ／ 本文と図はこのHTML内に保存されています。</p></article></div><script>if(matchMedia("(max-width:980px)").matches)document.getElementById("contents").open=false;</script></body></html>

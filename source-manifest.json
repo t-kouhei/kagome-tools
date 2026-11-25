@@ -1,19 +1,16 @@
 {
-  "application_version": "1.0.2",
+  "application_version": "1.0.3",
   "definition_revision": "kagome-source-routing-20261125.2",
-  "formula_changes": true,
+  "formula_changes": false,
   "basic_rotation_formula_changed": false,
   "changes": [
-    "同じ面の標準との差と全体の標準平均との差を併記",
-    "増加型の分布値と仮のスピン積の意味を明示",
-    "0以下の臨界量を容量として使う入力を停止",
-    "標準回転が0の仮スピン積を算定保留",
-    "5分の操作例と説明用台本を追加",
-    "5種類の条件を固定した比較例と前後の数値要約を追加",
-    "配分調整の変更前設定を保持して比較"
+    "入口の要求・受入・未受入量を結果画面で区別",
+    "内部の方向別区間合計と入口の方向別受入量を別表で表示",
+    "境界条件・標準総量・入口調整の説明と3つの確認用JSONを追加"
   ],
+  "previous_application_version": "1.0.2",
   "files": {
-    "__init__.py": "cf035ad49d1cf4652b97d8d785ce9d938d6097c799f34b81b0a9e4d4a0affad4",
+    "__init__.py": "25be31be0d323a4421cd39e9baa90f032383eb3de8faeb5f4e793bfd60fd0f9e",
     "__main__.py": "7afeadd4522552160b4980dc798d62c6351e23026023c4dc3f40ef0a286a8f3d",
     "_engine.py": "ee83e8d9a8f9a7e204ad3c119285931d60015a01ec1ea8716a9322e8b8c84e91",
     "basis.py": "1cd9a321c63a08362c2b07a3b4ebce007613ce9d7ccaf0d82661ede0aa779ae4",
@@ -44,7 +41,7 @@
     "trace.py": "0e446cb2f22bb369ba7c6f140c5e3ff90e2ccc2ef1b982166287162ec8e2a8b5",
     "tutorial.py": "9fb40d9027dd543f88ead748c201659235854135041e1afff31fb817afc8f19a",
     "usage.html": "d6e8ac0e45f61ce19e7708c29046ad2a33cc3e62b8377a52e9339971b48557bd",
-    "viewer.py": "fac167179fa11efecc4b3d41a36bb96ef133a387bd9a8c304117dd03a4a166da",
+    "viewer.py": "e156d882185a736d6a9f9880858cd836494dc22228182ea7a4ed1dbcc954dbb9",
     "workspace_history.py": "ca8f3b4440d822e8f43fcc2a2f6adc76e7b790bdb06f00ecc20b266c0a345e86"
   }
 }

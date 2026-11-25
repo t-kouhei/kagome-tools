@@ -8,6 +8,7 @@ from scripts.render_specification import render as render_specification
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / 'engine' / 'kagome_lattice'
 ALLOWED = {'.py', '.html', '.css', '.js'}
+ADMISSION_FILES = ('README.md', 'low.json', 'high.json', 'direction-6-off.json')
 
 
 def build():
@@ -30,6 +31,9 @@ def build():
         archive.write(ROOT / 'completion.html', '完成確認.html')
         archive.write(ROOT / '完成確認.md', '完成確認.md')
         archive.write(ROOT / 'docs/specification/kagome-structure.svg', 'docs/specification/kagome-structure.svg')
+        for name in ADMISSION_FILES:
+            path = ROOT / 'examples/admission' / name
+            archive.write(path, path.relative_to(ROOT))
     page = (SOURCE / 'editor.html').read_text(encoding='utf-8')
     page = page.replace('href="/assets/editor.css"', 'href="./assets/editor.css"')
     page = page.replace("const API_TOKEN='__TOKEN__',INITIAL_PROFILE='__PROFILE__';", "const API_TOKEN='',INITIAL_PROFILE=new URLSearchParams(location.search).get('profile')==='traffic'?'traffic':'patent';")
@@ -51,6 +55,7 @@ def build():
         (ROOT / name).write_text(document, encoding='utf-8')
     page = page.replace('ローカルワークスペース', 'ブラウザ内ワークスペース')
     page = page.replace('<div class="sidebar-bottom">', '<div class="sidebar-bottom"><a href="./specification.html" target="_blank" rel="noopener">仕様書（はじめから読む） ↗</a>', 1)
+    page = page.replace('<p class="hint">配分調整は入口から計算する場合に使います。', '<p class="hint"><a href="./specification.html#admission" target="_blank" rel="noopener">標準状態を使って入口の受入量を決める：説明と入力JSON ↗</a></p><p class="hint">配分調整は入口から計算する場合に使います。', 1)
     page = page.replace('</head>', '<link rel="icon" href="./icon.svg"></head>', 1)
     page = page.replace('<body>', '<body><div id="webLoading" role="status" style="position:fixed;inset:0;z-index:9999;background:#f3f6f7;display:grid;place-items:center;padding:24px"><div style="max-width:540px"><h1 style="font-size:26px">カゴメ解析を準備しています</h1><p id="webLoadingText">初回は計算環境を読み込みます。少しお待ちください。</p><p style="font-size:14px">入力と計算結果は、このブラウザに保存します。大切な結果はZIPやJSONでも保存してください。</p><button id="webRetry" hidden onclick="location.reload()">再読み込み</button><p><a href="./">ツール一覧へ戻る</a></p></div></div>')
     (ROOT / 'app.html').write_text(page, encoding='utf-8')
