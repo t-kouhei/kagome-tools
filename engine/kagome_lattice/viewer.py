@@ -94,6 +94,7 @@ def write_viewer(path, m, V, cmp, J, dec, crit, cap, limit, ops, issues, report,
         "direction_comparison": report.get("direction_comparison"),
         "hex_scenario_comparison": report.get("hex_scenario_comparison", []),
         "spin_interactions": report.get("standard", {}).get("spin_interactions"),
+        "comparison_summary": report.get('comparison_summary'),
         "labels": labels, "cmp_label": cmp["label"] if cmp else None,
         "estimate": report.get("estimate"), "changes": report.get("changes") or [], "available": available,
         "settings": {k: report.get(k) for k in ("n", "halo", "compared_with", "mode", "norm", "tau_mode", "eps", "theta", "limit_rule")},
@@ -191,6 +192,7 @@ line.sel{stroke-width:0.12}
   <div class="sub" id="settings"></div>
 </header>
 <div class="diagnostics">
+    <section class="card" id="effectCard"><h2>条件変更で、何が変わったか</h2><p class="note">内側の素辺と完全な内側六角形の集計です。容量比は各時点の容量に対する値。変化した量と、固定した条件を合わせて読んでください。</p><div id="effectTable" class="tbl"></div><ul id="effectObservations" class="note"></ul></section>
     <section class="card" id="directionCard"><h2>6方向の区間流量合計と標準</h2>
       <label>集計範囲 <select id="directionScope"><option value="inner">解析範囲内</option><option value="all">余白を含む全体</option></select></label>
       <div id="directions"></div>
@@ -250,6 +252,13 @@ const D = __DATA__;
 const $ = id => document.getElementById(id);
 const fmt = (x, d=2) => (x === null || x === undefined) ? "–" : (Math.abs(Number(x)) < 0.5 * 10 ** (-d) ? 0 : Number(x)).toLocaleString("ja-JP", {maximumFractionDigits: d});
 const RN = {1:"→",2:"↗",3:"↖",4:"←",5:"↙",6:"↘"};
+const EM={mean_j:'規格化量J・平均',hex_cw_mean:'右回り・平均',hex_ccw_mean:'左回り・平均',hex_net_mean:'正味回転・平均',standard_net_mean:'標準の正味回転・平均',max_usage:'最大容量比 V/c',over_capacity_edges:'容量超過の素辺数',equivalent_occupancy_mean:'換算した素片内の量n・平均',inflow_requested:'入口の要求量',inflow_total:'入口から入った量',outflow_total:'出口から出た量'};
+if(D.comparison_summary){const comparison=D.comparison_summary;
+  const display=(key,value)=>value==null?'–':key==='max_usage'?fmt(value*100,3)+'%':fmt(value,6);
+  $('effectTable').innerHTML='<table><thead><tr><th>量</th><th>変更前</th><th>変更後</th><th>後−前</th></tr></thead><tbody>'+Object.entries(EM).filter(([key])=>comparison.values[key]?.before!=null||comparison.values[key]?.after!=null).map(([key,label])=>{const row=comparison.values[key];return `<tr><td>${label}</td><td>${display(key,row.before)}</td><td>${display(key,row.after)}</td><td>${key==='max_usage'?(row.change==null?'–':fmt(row.change*100,3)+'ポイント'):display(key,row.change)}</td></tr>`;}).join('')+'</tbody></table>';
+  $('effectObservations').replaceChildren(...[...comparison.observations,comparison.note].map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
+  if(comparison.changed_parameters?.length){const li=document.createElement('li');li.textContent='変更した入力：'+comparison.changed_parameters.map(row=>`${row.source}.${row.parameter} ${row.before} → ${row.after}（${row.rows}行）`).join(' ／ ')+'。一覧にない入力列は変更なしです。';$('effectObservations').prepend(li);}
+}else $('effectCard').hidden=true;
 const BASIS_NAMES = {normalization:"規格化",source_formula:"原資料との式の対応",routing_convention:"進行方向と回転の規約",decomposition:"回転量と分解",propagation:"流れの伝播",estimate:"入口の推定",halo:"余白",critical:"臨界量",standard:"標準状態",limit:"向きごとの上限",hex_rotation:"六角形の標準平均との差",spin_interactions:"スピン相互作用（暫定）",vertex_model:"頂点模型（暫定）",global:"グローバル操作",local:"ローカル操作"};
 document.title = `${D.profile_info.name} — カゴメ格子解析`;
 document.querySelector("h1").textContent = `${D.profile_info.name} — カゴメ格子解析の結果`;
@@ -561,7 +570,7 @@ if(Lo){const mv=Lo.moves.slice(0,30);
 } else $("localCard").style.display="none";
 
 // シナリオ
-const FN={edges:"素辺",branching:"分岐の割合",entrances:"入口の流入量"};
+const FN={edges:"素辺",branching:"分岐の割合",entrances:"入口の流入量",settings:"配分調整の設定"};
 if(D.changes.length){$("chg").innerHTML="<table><tr><th>種類</th><th>場所</th><th>列</th><th>もと</th><th>変更後</th></tr>"+D.changes.map(c=>`<tr><td>${FN[c[0]]||c[0]}</td><td>${c[1]}</td><td>${c[2]}</td><td>${c[3]}</td><td>${c[4]}</td></tr>`).join("")+"</table><p class='note'>色分けの「もとの条件からの流量の変化」で、変更の影響が格子のどこまで及ぶかを見られる。</p>";} else $("chgCard").style.display="none";
 // 検査
 $("issues").innerHTML = D.issues.length ? "<table>"+D.issues.map(([s,w,m])=>`<tr><td class="${s==='error'?'err':'warn'}">${s==='error'?'誤り':'注意'}</td><td style="text-align:left;white-space:normal">${w}：${m}</td></tr>`).join("")+"</table>" : "<p class='note'>問題は見つからなかった。</p>";

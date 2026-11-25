@@ -24,7 +24,7 @@ jobs:
       - run: python build.py
       - run: python scripts/verify_package.py
       - run: python -m pip install numpy scipy pytest
-      - run: python -m pytest tests/test_release_rules.py -q
+      - run: python -m pytest tests/test_release_rules.py tests/test_effects.py -q
       - uses: actions/configure-pages@v5
       - name: Prepare public files
         run: |

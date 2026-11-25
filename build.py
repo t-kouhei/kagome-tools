@@ -34,6 +34,7 @@ def build():
         page = page.replace('href="/' + name, 'href="./' + name)
         document = (SOURCE / name).read_text(encoding='utf-8').replace('href="/"', 'href="./app.html"')
         document = document.replace('href="/?demo=flow"', 'href="./app.html?profile=patent&amp;demo=flow"')
+        document = document.replace('href="/?effect=', 'href="./app.html?profile=patent&amp;effect=')
         for target in ('guide.html', 'principles.html', 'usage.html', 'demonstration.html'):
             document = document.replace('href="/' + target, 'href="./' + target)
         document = document.replace('</head>', '<link rel="icon" href="./icon.svg"></head>', 1)

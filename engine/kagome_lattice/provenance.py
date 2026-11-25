@@ -10,7 +10,7 @@ import zipfile
 
 FORMULA_VERSION = 'kagome-source-routing-20261125.2'
 NUMERIC_MODULES = ('_engine.py', 'model.py', 'steady.py', 'flow.py', 'ops.py', 'spin.py',
-                   'semantics.py', 'diagnostics.py', 'trace.py', 'check.py', 'io.py', 'cli.py', 'basis.py')
+                   'semantics.py', 'diagnostics.py', 'trace.py', 'check.py', 'io.py', 'cli.py', 'basis.py', 'effects.py')
 OUTPUTS = ('edges_result.csv', 'tau.csv', 'rotation.csv', 'hex_rotation.csv', 'direction_comparison.csv')
 
 

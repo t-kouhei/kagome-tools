@@ -9,6 +9,7 @@ let history=[],future=[],checkpoint='',savedCheckpoint='',page=0,zoom=1,issues=[
 const pageSize=60;
 let currentSweepId=null,sweepTimer=null,sweepRunning=false,sweepCancelable=false,exampleCatalog=[];
 let demonstrationStage=0,demonstrationExpected='';
+let effectCatalog=[];
 $('profile').value=INITIAL_PROFILE==='auto'?'patent':INITIAL_PROFILE;
 let sessionId=null,draftReady=false,draftRevision=0,draftSerial='',draftPending=null,draftTimer=null,draftSending=false,lastResult=null;
 
@@ -30,7 +31,7 @@ async function action(fn){if(busy)return;busy=true;document.body.classList.add('
 function sync(){for(const k of ['mode','norm','tau','name','global_rule','local_rule'])state[k]=$(k).value;state.theta=$('theta').value===''?null:Number($('theta').value);return state;}
 function resetHistory(){history=[];future=[];checkpoint=JSON.stringify(state);savedCheckpoint=checkpoint;dirty=false;updateControls();}
 function record(){const value=JSON.stringify(state);if(checkpoint&&value!==checkpoint){history.push(checkpoint);if(history.length>20)history.shift();future=[];}checkpoint=value;dirty=value!==savedCheckpoint;}
-function hideResult(label='入力を変更・再解析してください'){lastResult=null;$('toggleLog').hidden=true;$('runLog').hidden=true;$('result').hidden=true;$('result').removeAttribute('src');$('resultLink').hidden=true;$('archiveLink').hidden=true;$('resultSummary').hidden=true;$('resultEmpty').hidden=false;$('resultState').textContent=label;$('resultState').className='tag';$('identityPanel').hidden=true;}
+function hideResult(label='入力を変更・再解析してください'){lastResult=null;$('toggleLog').hidden=true;$('runLog').hidden=true;$('result').hidden=true;$('result').removeAttribute('src');$('resultLink').hidden=true;$('archiveLink').hidden=true;$('resultSummary').hidden=true;if($('effectSummary'))$('effectSummary').hidden=true;$('resultEmpty').hidden=false;$('resultState').textContent=label;$('resultState').className='tag';$('identityPanel').hidden=true;}
 function clearBaseline(){baseline=null;baselineName='';$('baseLabel').textContent='変更前は未設定';updateControls();}
 function changed(message='入力を変更しました。再解析すると新しい条件の結果を確認できます。'){record();hideResult();validate();renderOverview();updateControls();status(message);queueDraft();}
 function download(name,text,type){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -168,6 +169,7 @@ $('mapMetric').onchange=map;$('zoomIn').onclick=()=>{zoom=Math.min(4,zoom*1.25);
 $('toggleLog').onclick=()=>{const open=$('runLog').hidden;$('runLog').hidden=!open;$('toggleLog').setAttribute('aria-expanded',String(open));};
 async function displayResult(result){
     const reportResponse=await fetch(result.url.replace('viewer.html','report.json'));if(!reportResponse.ok)throw Error('計算結果は保存されましたが、要約を読み込めません。再度解析してください。');const report=await reportResponse.json();
+    renderEffectSummary(report);
     const rows=[['解析対象の有向素辺',`${report.geometry.inner_directed_edges} 本`],['比較する六角形',`${report.standard?.hex_rotation?.count??'—'} 個`],['入力検査の指摘',`${report.issues.length} 件`],['配分調整',result.adjustment_resolved===null?'未選択':result.adjustment_resolved?'解消':'未解消']];
     $('resultSummary').replaceChildren(...rows.map(([name,value])=>{const el=document.createElement('div'),label=document.createElement('span'),number=document.createElement('strong');label.textContent=name;number.textContent=value;el.append(label,number);return el;}));$('resultSummary').hidden=false;$('resultEmpty').hidden=true;$('resultState').textContent=result.url.includes('/scenario/')?'変更前後の比較':'解析済み';$('resultState').className='tag ok';
     $('result').src=result.url;$('result').hidden=false;$('resultLink').href=result.url;$('resultLink').hidden=false;$('archiveLink').href=result.archive_url;$('archiveLink').hidden=false;lastResult=result.id;
@@ -227,6 +229,7 @@ async function startup(){
     requestAnimationFrame(()=>window.scrollTo(0,Math.max(0,Number(view.scrollY)||0)));
   }else status(initial.warning||'合成例を用意しました。練習例から始めるか、実際の条件に合わせて編集してください。',Boolean(initial.warning));
   exampleCatalog=await api('examples',{});$('exampleSelect').replaceChildren(...exampleCatalog.map(item=>new Option(item.name,item.id)));describeExample();
+  await loadEffectCases();
   if(draft?.view?.sweep_id){try{await showSweep(draft.view.sweep_id);}catch{}}
   await list();draftReady=true;$('draftStatus').textContent='復元用の自動保存が有効';
 }
@@ -290,5 +293,45 @@ function setupDemonstration(){
   });
   panel.open=new URLSearchParams(location.search).get('demo')==='flow';paint();
 }
+function renderEffectSummary(report){
+  let panel=$('effectSummary');if(!panel){panel=document.createElement('section');panel.id='effectSummary';panel.className='effect-summary';$('resultSummary').after(panel);}
+  const comparison=report.comparison_summary,metrics=report.effect_metrics;
+  panel.dataset.comparison=String(Boolean(comparison));
+  panel.replaceChildren();panel.hidden=!metrics;if(!metrics)return;
+  const title=document.createElement('h3');title.textContent=comparison?'変更前 → 変更後：実際に変わった量':'今回の計算結果';panel.append(title);
+  const labels={V:'流量V',m:'本数m',L:'長さL',v:'速度v',mu:'臨界基準μ',T:'分布の幅T',S:'直進割合',R:'右回り割合',local_rule:'局所配分',global_rule:'入口での配分'};
+  if(comparison?.changed_parameters?.length){const p=document.createElement('p');p.className='effect-observation';p.textContent='変更した入力：'+comparison.changed_parameters.map(row=>`${row.source==='branching'&&row.parameter==='L'?'左回り割合':labels[row.parameter]||row.parameter} ${row.before} → ${row.after}（${row.rows}行）`).join(' ／ ')+'。一覧にない入力列は変更なしです。';panel.append(p);}
+  const names={mean_j:'規格化量J・平均',hex_net_mean:'正味回転・平均',hex_cw_mean:'右回り・平均',hex_ccw_mean:'左回り・平均',standard_net_mean:'標準の正味回転・平均',max_usage:'最大容量比 V/c',over_capacity_edges:'容量超過の素辺数',equivalent_occupancy_mean:'換算した素片内の量n・平均',inflow_total:'入口から入った量',outflow_total:'出口から出た量'};
+  const wrap=document.createElement('div');wrap.className='effect-table';const table=document.createElement('table'),head=table.createTHead().insertRow();
+  for(const text of comparison?['量','変更前','変更後','後−前']:['量','現在値']){const th=document.createElement('th');th.textContent=text;head.append(th);}
+  const number=(value,digits=6)=>(Math.abs(value)<0.5*10**(-digits)?0:Number(value)).toLocaleString('ja-JP',{maximumFractionDigits:digits});
+  const format=(key,value)=>value==null?'–':(key==='max_usage'?number(value*100,3)+'%':number(value));
+  const body=table.createTBody();
+  for(const [key,label]of Object.entries(names)){
+    const value=metrics[key],row=comparison?.values[key];if(value==null&&row?.before==null)continue;
+    const tr=body.insertRow();tr.dataset.metric=key;const values=comparison?[label,format(key,row?.before),format(key,row?.after),key==='max_usage'?(row?.change==null?'–':number(row.change*100,3)+'ポイント'):format(key,row?.change)]:[label,format(key,value)];
+    for(const text of values){const td=tr.insertCell();td.textContent=text;}
+  }
+  wrap.append(table);panel.append(wrap);
+  const note=document.createElement('p');note.className='hint';note.textContent='内側の素辺・完全な内側六角形の集計です。平均の一致は各場所の一致を意味しません。容量比は各時点の容量に対する値です。';panel.append(note);
+  for(const text of comparison?.observations||[]){const p=document.createElement('p');p.className='effect-observation';p.textContent=text;panel.append(p);}
+}
+function setupEffects(){
+  const panel=document.createElement('details');panel.className='panel';panel.id='effectsPanel';
+  panel.innerHTML='<summary style="font-size:18px;font-weight:700">変化が分かる5つの比較例</summary><p class="hint">変える条件と固定する条件を明示し、同じ計算で前後を比較します。数値が変わらない例も含みます。</p><label class="input-label">確かめたいこと<select id="effectCase"></select></label><p id="effectChanged" class="hint"></p><p id="effectFixed" class="hint"></p><p id="effectCheck" class="effect-observation"></p><button id="effectRun" class="primary">この比較を実行する</button>';
+  $('setup').before(panel);panel.open=new URLSearchParams(location.search).has('effect');
+  $('effectCase').onchange=describeEffect;
+  $('effectRun').onclick=()=>action(async()=>{
+    if(!acceptReplace('現在の未保存の編集を、選択した比較例で置き換えますか？'))return;
+    const pair=await api('effect-case',{id:$('effectCase').value,profile:state.profile});
+    const saved=await api('save',pair.before);await replaceState(pair.after);baseline=saved.id;baselineName=pair.before.name;$('baseLabel').textContent='変更前を固定：'+baselineName;
+    status('変更前と変更後を同じ計算で解析しています。');
+    const result=await api('run',{state:clone(sync()),baseline});await displayResult(result);await list();
+    status(pair.info.changed+' '+pair.info.fixed+' 結果の「変更前 → 変更後」で実際の数値を確認できます。');$('resultsSection').scrollIntoView({behavior:'smooth'});
+  });
+}
+function describeEffect(){const info=effectCatalog.find(item=>item.id===$('effectCase').value);$('effectChanged').textContent=info?'変える条件：'+info.changed:'';$('effectFixed').textContent=info?'固定する条件：'+info.fixed:'';$('effectCheck').textContent=info?'ここで確かめること：'+info.check:'';}
+async function loadEffectCases(){effectCatalog=await api('effects',{});$('effectCase').replaceChildren(...effectCatalog.map(item=>new Option(item.name,item.id)));const requested=new URLSearchParams(location.search).get('effect');if(effectCatalog.some(item=>item.id===requested))$('effectCase').value=requested;describeEffect();}
+setupEffects();
 setupDemonstration();
 action(startup);

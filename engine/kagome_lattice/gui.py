@@ -22,6 +22,7 @@ from . import _engine as E
 from .tutorial import tutorial_state
 from .workspace_history import WorkspaceHistory, atomic_json, read_json
 from .examples import CATALOG, example_state
+from .effects import CATALOG as EFFECT_CASES, comparison_case
 from .sweep import SweepManager
 
 COLUMNS = {"edges": EDGE_COLS, "branching": BRANCH_COLS, "entrances": ENTRANCE_COLS}
@@ -136,6 +137,8 @@ class Workspace:
         if state["mode"] == "propagate":
             args.append("--entrances")
             args += ["--global", state.get("global_rule", "none"), "--local", state.get("local_rule", "none")]
+            if baseline:
+                args += ['--base-global', before.get('global_rule', 'none'), '--base-local', before.get('local_rule', 'none')]
         log = self.command(args)
         target = "result/scenario/viewer.html" if baseline else "result/viewer.html"
         if not (directory / target).exists():
@@ -210,6 +213,10 @@ def serve(profile=None, port=0, root=None, open_browser=True):
                     result = workspace.initialize(data)
                 elif self.path == '/api/examples':
                     result = CATALOG
+                elif self.path == '/api/effects':
+                    result = EFFECT_CASES
+                elif self.path == '/api/effect-case':
+                    result = comparison_case(data['id'], data['profile'])
                 elif self.path == '/api/example':
                     result = example_state(data['id'], data['profile'])
                 elif self.path == '/api/sweep':

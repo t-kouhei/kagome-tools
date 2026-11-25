@@ -41,6 +41,7 @@ import math
 import csv
 
 from .check import check
+from .effects import result_metrics, compare_metrics
 from .steady import SteadyFlowError, require_unique_steady
 from .trace import calculation_trace
 from .provenance import capture, write_bundle
@@ -425,6 +426,9 @@ def _run(m, inflow, a, outdir, ref=None, quiet=False, changes=None):
         report["standard"]["definition"] = presentation_text(report["standard"]["definition"], a.profile)
     if "vertex_model" in report:
         report["vertex_model"]["note"] = presentation_text(report["vertex_model"]["note"], a.profile)
+    report['effect_metrics'] = result_metrics(final, Vfin, J, cap, hex_rows, report)
+    if ref is not None and ref.get('metrics'):
+        report['comparison_summary'] = compare_metrics(ref['metrics'], report['effect_metrics'], changes or ())
     report['provenance'] = write_bundle(outdir, provenance_record)
     write_json(os.path.join(outdir, "report.json"), report)
     write_json(os.path.join(outdir, "parameters.json"), report["profile_info"])
@@ -528,16 +532,23 @@ def cmd_scenario(a):
     except ValueError as ex:
         print(ex)
         return 2
+    base_a = copy.copy(a)
+    for key in ('global_rule', 'local_rule'):
+        requested = getattr(a, 'base_' + key, None)
+        if requested is not None:
+            setattr(base_a, key, requested)
+        if getattr(base_a, key) != getattr(a, key):
+            log.append(('settings', 'all', key, getattr(base_a, key), getattr(a, key)))
     if not log:
         print("変更が 1 つも無い（change/ に edges.csv・branching.csv・entrances.csv のどれかを置く）。")
         return 2
     print(f"変更 {len(log)} か所")
-    base = _run(base_m, base_in, a, os.path.join(a.outdir, "base"), quiet=True)
+    base = _run(base_m, base_in, base_a, os.path.join(a.outdir, "base"), quiet=True)
     if base is None:
         return 2
     scn = _run(m2, in2, a, os.path.join(a.outdir, "scenario"),
                ref={"V": base["V"], "label": "もとの条件", "hex_rows": base["hex_rows"],
-                    "hex_mean": base["hex_mean"]}, quiet=True, changes=log)
+                    "hex_mean": base["hex_mean"], "metrics": base['report']['effect_metrics']}, quiet=True, changes=log)
     if scn is None:
         return 2
     rows = []
@@ -630,6 +641,8 @@ def main(argv=None):
     an.add_argument("outdir"); _common(an); an.set_defaults(f=cmd_analyze)
     sc = sub.add_parser("scenario"); sc.add_argument("n", type=int); sc.add_argument("indir")
     sc.add_argument("changedir"); sc.add_argument("outdir"); _common(sc); sc.set_defaults(f=cmd_scenario)
+    sc.add_argument('--base-global', dest='base_global_rule', choices=['none', 'direction', 'maxflow'], default=None)
+    sc.add_argument('--base-local', dest='base_local_rule', choices=['none', 'lp', 'spot', 'detour'], default=None)
     convert = sub.add_parser("source-input", help="μ・Tも単位換算し、原資料の基本設定へ移行")
     convert.add_argument("n", type=int); convert.add_argument("indir"); convert.add_argument("outdir")
     convert.add_argument("--halo", action="store_true"); convert.set_defaults(f=cmd_source_input)

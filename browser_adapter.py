@@ -14,6 +14,7 @@ from kagome_lattice.profiles import profile_info
 from kagome_lattice.semantics import migrate_state_to_source, convert_state_units, flow_from_occupancy
 from kagome_lattice.tutorial import tutorial_state
 from kagome_lattice.examples import CATALOG, example_state
+from kagome_lattice.effects import CATALOG as EFFECT_CASES, comparison_case
 from kagome_lattice import cli
 from kagome_lattice import sweep as sweep_module
 
@@ -129,6 +130,10 @@ def dispatch(path, data):
         return workspace.initialize(data)
     if path == 'examples':
         return CATALOG
+    if path == 'effects':
+        return EFFECT_CASES
+    if path == 'effect-case':
+        return comparison_case(data['id'], data['profile'])
     if path == 'example':
         return example_state(data['id'], data['profile'])
     if path == 'sweep':

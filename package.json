@@ -1,12 +1,13 @@
 {
   "name": "kagome-browser-tools",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "scripts": {
     "build": "python build.py",
     "check": "python scripts/verify_package.py",
     "test:browser": "node tests/browser.cjs",
-    "test:definitions": "node tests/definitions.cjs"
+    "test:definitions": "node tests/definitions.cjs",
+    "test:effects": "node tests/effects.cjs"
   },
   "devDependencies": {
     "playwright": "1.65.2"
