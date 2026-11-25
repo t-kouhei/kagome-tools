@@ -4,6 +4,8 @@
 
 初めて読む場合は[仕様書（目的・入力・計算・結果の読み方）](https://t-kouhei.github.io/kagome-tools/specification.html)から。原文は[仕様書.md](仕様書.md)。同じ原文から目次付きHTMLを生成する。
 
+[先生と行う完成確認](https://t-kouhei.github.io/kagome-tools/completion.html)に、入力条件・計算前の期待値・出力・保存の確認欄を用意。編集用は[完成確認.md](完成確認.md)。先生の例による完成確認は未実施。
+
 ## 機能
 
 v1.0.2の共通Python計算コードと入力画面を使用し、PyodideのWorkerで計算する。

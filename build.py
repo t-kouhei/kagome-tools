@@ -12,6 +12,7 @@ ALLOWED = {'.py', '.html', '.css', '.js'}
 
 def build():
     render_specification()
+    render_specification('完成確認.md', 'completion.html', '先生と行う完成確認', '2026年11月26日')
     release = json.loads((ROOT / 'release.json').read_text(encoding='utf-8'))
     files = sorted(p for p in SOURCE.iterdir() if p.is_file() and p.suffix in ALLOWED)
     manifest = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
@@ -23,9 +24,11 @@ def build():
             archive.write(path, 'kagome_lattice/' + path.name)
         archive.writestr('requirements.txt', 'numpy\nscipy\nmatplotlib\n')
         archive.writestr('run.bat', '@echo off\r\ncd /d "%~dp0"\r\npython -m kagome_lattice.gui\r\npause\r\n')
-        archive.writestr('README.txt', '最初に「仕様書.html」を開くと、目的・用語・入力・計算・結果の読み方を順に確認できます。\n\nPython 3.11以降を用意し、このフォルダで依存を導入します。\npython -m pip install -r requirements.txt\n\nrun.bat、または次のコマンドで起動します。\npython -m kagome_lattice.gui\n\n版の指定：--profile patent（汎用） / --profile traffic（交通）\n')
+        archive.writestr('README.txt', 'カゴメ解析ツール v' + release['application_version'] + '\n\n最初に「仕様書.html」を開くと、目的・用語・入力・計算・結果の読み方を順に確認できます。\n\n今回動作確認したPython 3.13を推奨します。このフォルダで依存を導入します。\npython -m pip install -r requirements.txt\n\nrun.bat、または次のコマンドで起動します。\npython -m kagome_lattice.gui\n\n版の指定：--profile patent（汎用） / --profile traffic（交通）\n\nブラウザ版：https://t-kouhei.github.io/kagome-tools/\n入力JSONと結果ZIPを手元にも保存してください。\n')
         archive.write(ROOT / 'specification.html', '仕様書.html')
         archive.write(ROOT / '仕様書.md', '仕様書.md')
+        archive.write(ROOT / 'completion.html', '完成確認.html')
+        archive.write(ROOT / '完成確認.md', '完成確認.md')
         archive.write(ROOT / 'docs/specification/kagome-structure.svg', 'docs/specification/kagome-structure.svg')
     page = (SOURCE / 'editor.html').read_text(encoding='utf-8')
     page = page.replace('href="/assets/editor.css"', 'href="./assets/editor.css"')
@@ -57,7 +60,7 @@ def build():
         if name == 'editor.js':
             data = data.replace(b'href="/demonstration.html"', b'href="./demonstration.html"')
         (ROOT / 'assets' / name).write_bytes(data)
-    (ROOT / 'source-manifest.json').write_text(json.dumps({**release, 'files': manifest}, ensure_ascii=False, indent=2), encoding='utf-8')
+    (ROOT / 'source-manifest.json').write_text(json.dumps({**release, 'files': manifest}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print(f'Packaged {len(files)} application files; no reference or saved-case directories.')
 
 

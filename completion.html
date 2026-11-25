@@ -1,0 +1,256 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="先生の想定する入力・期待値・ソフト出力・保存結果を照合する完成確認用紙。"><title>先生と行う完成確認</title><style>
+:root{font:16px/1.95 "Yu Gothic UI",Meiryo,sans-serif;color:#223b44;background:#f3f6f5;--line:#dbe5e0;--green:#176f65}*{box-sizing:border-box}body{margin:0}a{color:var(--green);text-underline-offset:3px}.layout{max-width:1420px;margin:auto;display:grid;grid-template-columns:260px minmax(0,960px);gap:34px;padding:32px 24px}aside{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:12px;padding:18px 12px}.brand{font:600 11px/1.7 sans-serif;letter-spacing:.12em;color:var(--green)}summary{font-size:15px;font-weight:700;cursor:pointer}.toc ul{list-style:none;padding-left:0}.toc ul ul{padding-left:14px}.toc li{margin:7px 0;line-height:1.65}.toc a{text-decoration:none;color:#536d70}.toc a:hover{text-decoration:underline;color:var(--green)}article{min-width:0;background:#fff;padding:44px 50px;border:1px solid var(--line);border-radius:12px}h1{font-size:32px;line-height:1.5;margin:0 0 18px}h2{font-size:24px;line-height:1.6;border-top:1px solid var(--line);padding-top:27px;margin:42px 0 16px;scroll-margin-top:20px}h3{font-size:18px;margin:25px 0 10px;scroll-margin-top:20px}p{margin:14px 0}li{margin:7px 0}strong{font-weight:700;color:#154f49}img{max-width:100%;height:auto;display:block;margin:20px auto}pre{overflow:auto;background:#edf4f1;border-radius:7px;border-left:3px solid #5caa96;padding:18px;font:14px/1.8 Consolas,Meiryo,monospace}code{font-size:.9em;background:#edf4f1;border-radius:3px;padding:2px 4px}pre code{padding:0;background:none}.table-wrap{overflow:auto;margin:20px 0}table{border-collapse:collapse;width:100%;font-size:13px;line-height:1.8}td,th{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top;min-width:80px}th{background:#edf4f1;font-weight:600}table td:first-child{min-width:95px}.actions{display:flex;gap:13px;flex-wrap:wrap;margin:16px 0}.actions a,.actions button{font:inherit;font-size:12px;cursor:pointer;border:1px solid #c7dcd4;background:white;padding:6px 10px;border-radius:6px;text-decoration:none;color:var(--green)}.foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:#647977}@media(max-width:980px){.layout{display:block;padding:14px}aside{position:static;max-height:none;padding:14px 8px}article{padding:28px 22px}.toc{max-height:55vh;overflow:auto}h1{font-size:27px}h2{font-size:22px}.table-wrap{margin-left:-4px;margin-right:-4px}td,th{padding:8px;font-size:12px}}@media print{@page{size:A4;margin:17mm}body{background:white;font-size:10pt;line-height:1.75}.layout{display:block;padding:0;max-width:none}aside,.actions{display:none}article{border:0;padding:0}h1{font-size:23pt}h2{font-size:16pt;break-after:avoid}h3{break-after:avoid}pre,tr,img{break-inside:avoid}.table-wrap{overflow:visible}table{font-size:8pt}a{color:#243f44}h2{margin-top:25px;padding-top:16px}}
+</style></head><body><div class="layout"><aside><p class="brand">KAGOME / COMPLETION REVIEW</p><details id="contents" open><summary>完成確認の目次</summary><div class="toc">
+<ul>
+<li><a href="#1">1 今回完成させるもの</a></li>
+<li><a href="#2">2 当日の入口</a></li>
+<li><a href="#3">3 最初の動作確認に使う既存例</a></li>
+<li><a href="#4">4 先生の例：計算前に記入する入力</a></li>
+<li><a href="#5">5 先生の例：期待値とソフト出力を照合する</a></li>
+<li><a href="#6">6 保存・再現の確認</a></li>
+<li><a href="#7">7 完成確認の記録</a></li>
+</ul>
+</div>
+</details><div class="actions"><a href="https://t-kouhei.github.io/kagome-tools/">ツール一覧</a><a href="./完成確認.md">Markdown原文</a><button onclick="window.print()">印刷・PDF保存</button></div></aside><article><h1 id="_1">先生と行う完成確認</h1>
+<p>対象：カゴメ解析ツール v1.0.2 / 式の版：kagome-source-routing-20261125.2 / 作成：2026年11月26日</p>
+<p><strong>汎用カゴメ解析ツールに先生の想定した入力を入れ、期待する計算結果と出力を照合するための用紙です。</strong></p>
+<p>最初に既存の操作例で画面を確認し、次に先生の例を記録して計算します。下の「先生の例」は未記入です。ソフトの出力を先に見て期待値を埋める方法は避け、先生の意図した値・式を先に記録します。</p>
+<h2 id="1">1 今回完成させるもの</h2>
+<p>カゴメ構造の条件を入力し、共通の関係式から流れ・局所回転・三角形と六角形の回転量を計算し、標準状態や変更前と比較して保存する汎用ソフトです。パラメータの物理的な意味と単位は利用者が定めます。交通版は同じ計算の表示例です。</p>
+<p>SUMO、実交通での効果検証、交通以外の新しい適用例は今回追加しません。仮のスピン積は参考情報です。新たな相互作用式や数値縮約を、今回の完成確認に自動的に追加しません。</p>
+<h2 id="2">2 当日の入口</h2>
+<ol>
+<li><a href="https://t-kouhei.github.io/kagome-tools/">ツール一覧</a>から「汎用版」を開きます。</li>
+<li>目的や用語は<a href="https://t-kouhei.github.io/kagome-tools/specification.html">仕様書</a>の第1〜9章で確認します。</li>
+<li><a href="https://t-kouhei.github.io/kagome-tools/demonstration.html">5分の操作例</a>で、一つの入力だけを変えた比較を実演します。</li>
+<li>先生の例を入力し、下の記録表に沿って照合します。</li>
+</ol>
+<p>公開URLで起動できます。Python版は配布フォルダの「カゴメ解析ツールを起動.bat」で起動します。入力JSONと結果ZIPを手元に保存してください。ブラウザ内の結果URLだけでは他の人に結果を渡せません。</p>
+<h2 id="3">3 最初の動作確認に使う既存例</h2>
+<p>これはソフトで用意した操作例です。先生が指定した例としては扱いません。</p>
+<p>全素辺にm=2、L=0.5、v=40、V=1600、μ=1000、T=100を設定します。分岐はS=0.60、R=0.25、L=0.15、θ=0.5です。「一様な入力を用意」で用意できます。各経路の量を直接入力する方法を使い、配分調整は行いません。比較対象は内側の完全な六角形です。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>確認する量</th>
+<th style="text-align: right;">変更前 V=1600</th>
+<th style="text-align: right;">標準 V=2000</th>
+<th style="text-align: right;">変更後 V=2400</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>正規化した流量j=V/m</td>
+<td style="text-align: right;">800</td>
+<td style="text-align: right;">1000</td>
+<td style="text-align: right;">1200</td>
+</tr>
+<tr>
+<td>局所の右回りτ</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">125</td>
+<td style="text-align: right;">150</td>
+</tr>
+<tr>
+<td>局所の左回りτ</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;">90</td>
+</tr>
+<tr>
+<td>六角形の右回り</td>
+<td style="text-align: right;">600</td>
+<td style="text-align: right;">750</td>
+<td style="text-align: right;">900</td>
+</tr>
+<tr>
+<td>六角形の左回り</td>
+<td style="text-align: right;">360</td>
+<td style="text-align: right;">450</td>
+<td style="text-align: right;">540</td>
+</tr>
+<tr>
+<td>六角形の正味</td>
+<td style="text-align: right;">240</td>
+<td style="text-align: right;">300</td>
+<td style="text-align: right;">360</td>
+</tr>
+<tr>
+<td>正味と標準正味との差</td>
+<td style="text-align: right;">−60</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">+60</td>
+</tr>
+<tr>
+<td>各素辺の容量比V/c</td>
+<td style="text-align: right;">80%</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">120%</td>
+</tr>
+</tbody>
+</table></div>
+<p>画面の4操作は「一様な入力を用意」→「解析して変更前を固定」→「流量を2400へ変更」→「変更前後を比較」です。一様な例では個別標準と標準平均が同じになります。非一様な先生の例では、2種類の基準を別々に確認します。</p>
+<h2 id="4">4 先生の例：計算前に記入する入力</h2>
+<p>入力が素辺ごとに異なる場合は全値を表へ転記せず、入力JSONまたはCSVを添付し、対象の素辺・節点・面をIDで指定します。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>項目</th>
+<th>先生と記入する内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>確認日・例の名前・記入者</td>
+<td>未記入</td>
+</tr>
+<tr>
+<td>パラメータの意味と単位</td>
+<td>m、L、V、v、μ、Tをそれぞれ記入。使わない任意項目も明記</td>
+</tr>
+<tr>
+<td>格子規模N・周囲の余白</td>
+<td>未記入</td>
+</tr>
+<tr>
+<td>入力方法</td>
+<td>各経路のVを直接指定／入口から伝播</td>
+</tr>
+<tr>
+<td>条件の原本</td>
+<td>入力JSON・edges.csv・branching.csv。入口方式はentrances.csvも指定</td>
+</tr>
+<tr>
+<td>正規化・τの計算方式</td>
+<td>標準の規約はnorm=m、tau=engine。変更する場合は明記</td>
+</tr>
+<tr>
+<td>標準を使う場合の条件</td>
+<td>μ、T、θ。標準を使わない場合はその旨を記入</td>
+</tr>
+<tr>
+<td>配分調整</td>
+<td>変更前と変更後のglobal・localを別々に記入</td>
+</tr>
+<tr>
+<td>変更する条件／固定する条件</td>
+<td>未記入</td>
+</tr>
+<tr>
+<td>対象のIDと集計範囲</td>
+<td>素辺・節点・面のID、inner/all、対象成分と集計方法</td>
+</tr>
+<tr>
+<td>期待値の根拠</td>
+<td>先生の手計算・指定式・別計算のいずれかと、その内容</td>
+</tr>
+<tr>
+<td>許容誤差</td>
+<td>未記入。通常の数値照合は絶対1e−10・相対1e−12を参考に、単位と桁に応じて先に定める</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="5">5 先生の例：期待値とソフト出力を照合する</h2>
+<p>対象が複数の場合は行を追加します。使わない指標には「対象外」と記入します。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>対象ID・指標</th>
+<th>計算前の期待値</th>
+<th>ソフトの出力</th>
+<th>差・判定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>指定素辺のj</td>
+<td>未記入</td>
+<td>未実行</td>
+<td>未判定</td>
+</tr>
+<tr>
+<td>指定節点・経路のτ（右／左）</td>
+<td>未記入</td>
+<td>未実行</td>
+<td>未判定</td>
+</tr>
+<tr>
+<td>指定三角形の右／左／正味</td>
+<td>未記入</td>
+<td>未実行</td>
+<td>未判定</td>
+</tr>
+<tr>
+<td>指定六角形の右／左／正味</td>
+<td>未記入</td>
+<td>未実行</td>
+<td>未判定</td>
+</tr>
+<tr>
+<td>指定面と同じ面の標準との差</td>
+<td>未記入</td>
+<td>未実行</td>
+<td>未判定</td>
+</tr>
+<tr>
+<td>指定面と全体の標準平均との差</td>
+<td>未記入</td>
+<td>未実行</td>
+<td>未判定</td>
+</tr>
+<tr>
+<td>変更前→変更後の指定指標</td>
+<td>未記入</td>
+<td>未実行</td>
+<td>未判定</td>
+</tr>
+<tr>
+<td>必要な方向別合計・容量比</td>
+<td>未記入</td>
+<td>未実行</td>
+<td>未判定</td>
+</tr>
+</tbody>
+</table></div>
+<p>「一致」は、合意した期待値と許容誤差で判断します。平均だけ一致しても、各面が一致したとは判断しません。相違があれば入力、対象ID、範囲、右左の向き、比較基準の順に確認します。定義に関わる相違は既存の「先生への確認シート」の該当項目に対応付けます。</p>
+<h2 id="6">6 保存・再現の確認</h2>
+<ul>
+<li>「入力一式を書き出す」で入力JSONを保存する。</li>
+<li>「入力JSONを読み込む」で保存した入力を読み直し、同じ条件で再計算する。</li>
+<li>結果ZIPを保存し、展開した結果HTMLとCSVを開く。</li>
+<li>report.jsonまたは計算記録にあるソフト版・式の版・入力SHA-256を記録する。</li>
+<li>変更前後を比較した場合は、両側の入力・設定と比較結果を保存する。</li>
+</ul>
+<p>保存する名前の例：<code>確認日_例名_入力.json</code>、<code>確認日_例名_結果.zip</code>、記入済みの本用紙。結果ZIPに入力CSVと再現情報を含みます。日常の再編集に使うJSONも別途保存してください。</p>
+<h2 id="7">7 完成確認の記録</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>項目</th>
+<th>判定・記入欄</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>先生の期待する基本計算と一致</td>
+<td>未確認</td>
+</tr>
+<tr>
+<td>比較基準・右左・範囲の意味を共有</td>
+<td>未確認</td>
+</tr>
+<tr>
+<td>入力保存・再読込・結果保存を確認</td>
+<td>未確認</td>
+</tr>
+<tr>
+<td>修正が必要な場合の箇所と期待値</td>
+<td>未記入</td>
+</tr>
+<tr>
+<td>最終判定／確認者／日付</td>
+<td>未判定</td>
+</tr>
+</tbody>
+</table></div>
+<p>ソフト側の動作確認は実施済みですが、先生の例による完成確認は未実施です。上の欄を記入し、必要な修正があれば反映して該当例を再計算します。期待値と保存・再現まで確認できた時点で完成確認済みとします。</p><p class="foot">対象 v1.0.2 ／ 文書更新 2026年11月26日 ／ 本文と図はこのHTML内に保存されています。</p></article></div><script>if(matchMedia("(max-width:980px)").matches)document.getElementById("contents").open=false;</script></body></html>

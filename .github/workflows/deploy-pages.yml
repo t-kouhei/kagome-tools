@@ -31,7 +31,7 @@ jobs:
       - name: Prepare public files
         run: |
           mkdir _site
-          cp index.html app.html usage.html principles.html guide.html demonstration.html specification.html 仕様書.md icon.svg engine.zip desktop-tool.zip source-manifest.json browser_adapter.py web-bridge.js worker.mjs sw.js _site/
+          cp index.html app.html usage.html principles.html guide.html demonstration.html specification.html 仕様書.md completion.html 完成確認.md icon.svg engine.zip desktop-tool.zip source-manifest.json browser_adapter.py web-bridge.js worker.mjs sw.js _site/
           cp -r assets _site/
           cp -r docs _site/
           touch _site/.nojekyll

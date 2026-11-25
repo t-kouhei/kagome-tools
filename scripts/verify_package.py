@@ -25,6 +25,8 @@ with zipfile.ZipFile(ROOT / 'engine.zip') as archive:
 with zipfile.ZipFile(ROOT / 'desktop-tool.zip') as archive:
     assert archive.read('仕様書.md') == (ROOT / '仕様書.md').read_bytes()
     assert archive.read('仕様書.html') == (ROOT / 'specification.html').read_bytes()
+    assert archive.read('完成確認.md') == (ROOT / '完成確認.md').read_bytes()
+    assert archive.read('完成確認.html') == (ROOT / 'completion.html').read_bytes()
 
 
 class Links(HTMLParser):
@@ -40,7 +42,7 @@ class Links(HTMLParser):
             assert path.exists(), value
 
 
-for name in ('index.html', 'app.html', 'usage.html', 'principles.html', 'guide.html', 'demonstration.html', 'specification.html'):
+for name in ('index.html', 'app.html', 'usage.html', 'principles.html', 'guide.html', 'demonstration.html', 'specification.html', 'completion.html'):
     Links().feed((ROOT / name).read_text(encoding='utf-8'))
 assert manifest['basic_rotation_formula_changed'] is False
 print(f'PASS: {len(manifest["files"])} release files, unchanged lattice engine, package contents, Python syntax, and public HTML links.')

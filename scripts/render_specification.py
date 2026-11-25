@@ -8,13 +8,13 @@ import markdown
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def render():
-    source = (ROOT / '仕様書.md').read_text(encoding='utf-8')
+def render(source_name='仕様書.md', output_name='specification.html', title='カゴメ解析ツール 仕様書', updated='2026年11月25日'):
+    source = (ROOT / source_name).read_text(encoding='utf-8')
     document = markdown.Markdown(extensions=['tables', 'fenced_code', 'toc', 'sane_lists'],
                                  extension_configs={'toc': {'toc_depth': '2-3'}})
     body = document.convert(source)
     for path in (ROOT / 'docs/specification').glob('*.svg'):
-        encoded = base64.b64encode(path.read_bytes()).decode('ascii')
+        encoded = base64.b64encode(path.read_bytes().replace(b'\r\n', b'\n')).decode('ascii')
         body = body.replace('src="docs/specification/' + path.name + '"', 'src="data:image/svg+xml;base64,' + encoded + '"')
     body = re.sub(r'(<table>.*?</table>)', r'<div class="table-wrap">\1</div>', body, flags=re.S)
     style = '''
@@ -22,8 +22,14 @@ def render():
 '''
     html = '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="カゴメ解析ツールの目的、用語、入力、計算、基準との比較を最初から説明する仕様書。"><title>カゴメ解析ツール 仕様書</title><style>' + style + '</style></head><body><div class="layout"><aside><p class="brand">KAGOME / SPECIFICATION</p><details id="contents" open><summary>仕様書の目次</summary>' + document.toc + '</details><div class="actions"><a href="./">ツール一覧</a><a href="./仕様書.md">Markdown原文</a><button onclick="window.print()">印刷・PDF保存</button></div></aside><article>' + body + '<p class="foot">対象 v1.0.2 ／ 文書更新 2026年11月25日 ／ 本文と図はこのHTML内に保存されています。</p></article></div><script>if(matchMedia("(max-width:980px)").matches)document.getElementById("contents").open=false;</script></body></html>'
     html = html.replace('href="./">ツール一覧', 'href="https://t-kouhei.github.io/kagome-tools/">ツール一覧')
-    (ROOT / 'specification.html').write_text(html, encoding='utf-8', newline='\n')
-    print('Rendered the specification from one Markdown source.')
+    html = html.replace('<title>カゴメ解析ツール 仕様書</title>', '<title>' + title + '</title>')
+    html = html.replace('文書更新 2026年11月25日', '文書更新 ' + updated)
+    if source_name != '仕様書.md':
+        html = html.replace('仕様書の目次', '完成確認の目次').replace('KAGOME / SPECIFICATION', 'KAGOME / COMPLETION REVIEW')
+        html = html.replace('href="./仕様書.md"', 'href="./' + source_name + '"')
+        html = html.replace('カゴメ解析ツールの目的、用語、入力、計算、基準との比較を最初から説明する仕様書。', '先生の想定する入力・期待値・ソフト出力・保存結果を照合する完成確認用紙。')
+    (ROOT / output_name).write_text(html + '\n', encoding='utf-8', newline='\n')
+    print('Rendered ' + output_name + ' from one Markdown source.')
 
 
 if __name__ == '__main__':
