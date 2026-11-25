@@ -14,9 +14,10 @@
     強磁性型①  三角形と三角形（交差点を共有）
     強磁性型②  六角形と六角形（交差点を共有）
     4 重極型    交差点の周りの 4 つ（三角形 2・六角形 2）
-  相互作用の量（その型の状態にどれだけ合っているか。大きいほど合っている）：
+  参考として計算する積（良否・回転の一致を直接判定する値ではない）：
     強磁性型   q ＝ S_i·S_j          反強磁性型 q ＝ −S_i·S_j          4 重極型 q ＝ S_1·S_2·S_3·S_4
-  S は標準状態の |S| の平均で割って無次元にする。結合の強さはすべて 1（先生の式を受けて置き換える）。
+  S は標準状態の |S| の平均で割って無次元にする。平均0では算定保留とし、代わりに1を置かない。
+  結合の強さはすべて 1（先生の式を受けて置き換える）。
   資料 p.16「標準交通状況における反磁性・強磁性・4 重極状態からの差の総量」として、
   型ごとに Σ(今 − 標準)（符号つき）と Σ|今 − 標準|（差の総量）を出す。
 
@@ -115,16 +116,19 @@ def hex_rotation_comparison(m, dec_now, dec_std):
     rows = {}
     for i, j in coords:
         now = components(dec_now, i, j)
-        rows[i, j] = {"now": now, "difference": {k: v - mean[k] for k, v in now.items()}}
+        own = components(dec_std, i, j)
+        rows[i, j] = {"now": now, "standard": own,
+                      "minus_own_standard": {k: now[k] - own[k] for k in now},
+                      "difference": {k: v - mean[k] for k, v in now.items()}}
     return mean, rows
 
 
 def _q(kind: str, S: Dict, g: Tuple, u: float) -> float:
     if kind == "quadrupole":
         _, a, b, c, d = g
-        return S[a] * S[b] * S[c] * S[d] / u ** 4
+        return (S[a] / u) * (S[b] / u) * (S[c] / u) * (S[d] / u)
     a, b = g
-    return (-1.0 if kind.startswith("antiferro") else 1.0) * S[a] * S[b] / u ** 2
+    return (-1.0 if kind.startswith("antiferro") else 1.0) * (S[a] / u) * (S[b] / u)
 
 
 def spin_interactions(m, dec_now, dec_std) -> Dict[str, object]:
@@ -133,18 +137,23 @@ def spin_interactions(m, dec_now, dec_std) -> Dict[str, object]:
     S_std = {f["key"]: f["net"] for f in faces(m, dec_std)}
     sets = interaction_sets(m, dec_std)
     used = {k for g in sets["antiferro_tri_hex"] for k in g}
-    u = sum(abs(S_std[k]) for k in used) / max(1, len(used))
-    if u <= 0:
-        u = 1.0
-    out = {"scale": u, "types": {}, "rows": [], "trace": {
-        "status": "provisional",
+    u = math.fsum(abs(S_std[k]) / len(used) for k in used) if used else 0.0
+    available = bool(used) and math.isfinite(u) and u > 0
+    status = "provisional" if available else "withheld"
+    reason = "" if available else ("対象面がないため、仮のスピン積を算定できません。" if not used else
+        "標準状態の正味回転の絶対値平均が0のため、仮のスピン積は規格化できず算定保留です。右・左・正味の回転量と標準との差は確認できます。")
+    out = {"scale": u, "available": available, "status": status, "reason": reason,
+           "types": {}, "rows": [], "trace": {
+        "status": status,
+        "available": available,
+        "reason": reason,
         "geometry": "uncontracted_kagome_faces",
         "source_geometry": "資料p.15：上向き三角を縮約したハニカム格子",
         "contraction_implemented": False,
         "formula_origin": "implementation_assumption",
         "spin": "S = clockwise - counterclockwise",
         "scale": u,
-        "scale_definition": "対象面における標準状態のabs(S)の平均。0なら1を使用",
+        "scale_definition": "対象面における標準状態のabs(S)の平均。0なら算定保留。代替の定数は使わない",
         "formulas": {
             "antiferro_tri_hex": "-S_a*S_b/scale**2",
             "ferro_tri_tri": "S_a*S_b/scale**2",
@@ -156,11 +165,12 @@ def spin_interactions(m, dec_now, dec_std) -> Dict[str, object]:
     for kind in INTERACTIONS:
         tot_now = tot_std = d_sum = d_abs = 0.0
         for g in sets[kind]:
-            qn, qs = _q(kind, S_now, g, u), _q(kind, S_std, g, u)
-            tot_now += qn
-            tot_std += qs
-            d_sum += qn - qs
-            d_abs += abs(qn - qs)
+            qn, qs = (_q(kind, S_now, g, u), _q(kind, S_std, g, u)) if available else (None, None)
+            if available:
+                tot_now += qn
+                tot_std += qs
+                d_sum += qn - qs
+                d_abs += abs(qn - qs)
             out["rows"].append((kind, g, qn, qs))
             keys = g[1:] if kind == "quadrupole" else g
             out["trace"]["rows"].append({
@@ -168,11 +178,11 @@ def spin_interactions(m, dec_now, dec_std) -> Dict[str, object]:
                 "node": list(g[0]) if kind == "quadrupole" else None,
                 "faces": [{"key": list(k), "spin_now": S_now[k],
                            "spin_standard": S_std[k]} for k in keys],
-                "q_now": qn, "q_standard": qs, "difference": qn - qs,
+                "q_now": qn, "q_standard": qs, "difference": qn - qs if available else None,
             })
         out["types"][kind] = {"name": INTERACTION_NAMES[kind], "count": len(sets[kind]),
-                              "now": tot_now, "standard": tot_std,
-                              "diff": d_sum, "diff_abs": d_abs}
+                              "now": tot_now if available else None, "standard": tot_std if available else None,
+                              "diff": d_sum if available else None, "diff_abs": d_abs if available else None}
     return out
 
 

@@ -16,6 +16,7 @@ LABELS = {
     "usage": "容量に対する流量 V/c",
     "margin": "臨界量までの余裕 ε* − ε",
     "dev_std": "標準状態（全素辺が臨界）からのずれ V − V_std",
+    "f": "増加型の分布値 f（良否は用途側で定める）",
 }
 
 
@@ -92,6 +93,7 @@ def write_viewer(path, m, V, cmp, J, dec, crit, cap, limit, ops, issues, report,
         "provenance": report.get('provenance'),
         "direction_comparison": report.get("direction_comparison"),
         "hex_scenario_comparison": report.get("hex_scenario_comparison", []),
+        "spin_interactions": report.get("standard", {}).get("spin_interactions"),
         "labels": labels, "cmp_label": cmp["label"] if cmp else None,
         "estimate": report.get("estimate"), "changes": report.get("changes") or [], "available": available,
         "settings": {k: report.get(k) for k in ("n", "halo", "compared_with", "mode", "norm", "tau_mode", "eps", "theta", "limit_rule")},
@@ -189,9 +191,14 @@ line.sel{stroke-width:0.12}
   <div class="sub" id="settings"></div>
 </header>
 <div class="diagnostics">
-    <section class="card" id="directionCard"><h2>6方向の総交通量と標準</h2>
+    <section class="card" id="directionCard"><h2>6方向の区間流量合計と標準</h2>
       <label>集計範囲 <select id="directionScope"><option value="inner">解析範囲内</option><option value="all">余白を含む全体</option></select></label>
       <div id="directions"></div>
+    </section>
+    <section class="card" id="rotationComparisonCard"><h2>六角形の回転量：2つの基準で比較</h2>
+      <label>成分 <select id="rotationComparisonComponent"><option value="net">正味（右回り − 左回り）</option><option value="cw">右回り</option><option value="ccw">左回り</option></select></label>
+      <p class="note">「同じ面の標準との差」はその場所の基準からの変化。「標準平均との差」は全体の基準に対する分布です。現況が標準そのものでも、後者は0とは限りません。差の正負は良否や実際の回転方向を意味しません。</p>
+      <div id="rotationComparison" class="tbl"></div>
     </section>
     <section class="card" id="hexCompareCard"><h2>変更前後の六角形の回転量</h2>
       <label>成分 <select id="hexCompareComponent"><option value="cw">右回り</option><option value="ccw">左回り</option><option value="net">正味（右回り − 左回り）</option></select></label>
@@ -206,7 +213,7 @@ line.sel{stroke-width:0.12}
     </div>
     <div class="controls">
       <label>回転量を重ねる <select id="rotSel"><option value="none">重ねない</option><option value="tri">三角形</option><option value="hex">六角形</option><option value="both">三角形と六角形</option></select></label>
-      <label id="rotModeL">値 <select id="rotMode"><option value="now">今の回転量</option><option value="std">標準状態の回転量</option><option value="dev">標準状態からのずれ</option></select></label>
+      <label id="rotModeL">値 <select id="rotMode"><option value="now">現在の回転量</option><option value="std">同じ面の標準回転量</option><option value="dev">同じ面の標準との差</option></select></label>
       <label>回転の成分 <select id="rotComponent"><option value="net">正味（右回り − 左回り）</option><option value="cw">右回り</option><option value="ccw">左回り</option></select></label>
       <div class="legend" id="rotLegend"><span id="rneg"></span><span id="rlo"></span><div class="bar" id="rbar"></div><span id="rhi"></span><span id="rpos"></span></div>
     </div>
@@ -220,6 +227,7 @@ line.sel{stroke-width:0.12}
       <li>各変数にどの物理量を当てはめるかは使う側が決める。このツールは判定や良し悪しの評価をしない</li>
     </ul>
     <details style="margin-top:12px"><summary>計算の前提と確認事項</summary><dl id="basis" class="note"></dl></details>
+    <details style="margin-top:12px" id="interactionCard"><summary>参考：仮のスピン積（良否の判定には使わない）</summary><p id="interactionNote" class="note"></p><div id="interactionValues" class="tbl"></div><p class="note">標準(10,10)と現況(20,5)の積は共に100ですが、回転量は変わっています。積と回転の一致・過不足は別に読みます。右・左の成分と2つの標準との差を基本表示で確認してください。</p></details>
     <details style="margin-top:12px"><summary>共通パラメータとこの版での意味</summary><p id="geometry" class="note"></p><dl id="parameters" class="note"></dl></details>
     <details style="margin-top:12px"><summary>計算の版と再現記録</summary><pre id="provenanceInfo" class="note" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><p class="note"><a href="provenance.json" target="_blank">識別情報と環境</a> ／ <a href="engine_snapshot.zip">当時の実装ZIP</a> ／ <a href="REPRODUCE.txt" target="_blank">再実行の手順</a></p></details>
     <details style="margin-top:12px" id="tracePanel"><summary>計算過程を見る（入力 → 規格化 → 臨界量・回転量 → 出力）</summary>
@@ -397,6 +405,22 @@ rmode.addEventListener("change",()=>{
 rcomponent.addEventListener("change",paintRot);
 if(!D.rot.some(r=>r.std_net!==undefined)) $("rotModeL").style.display="none";
 paintRot();
+function paintRotationComparison(){
+  const component=$("rotationComparisonComponent").value;
+  const rows=D.rot.filter(r=>r.kind==="h"&&r.minus_mean&&r["std_"+component]!=null);
+  if(!rows.length){$("rotationComparison").textContent="解析範囲内の完全な六角形と標準状態がそろうと比較できます。";return;}
+  const mean=D.hex_rotation.standard_mean[component];
+  $("rotationComparison").innerHTML="<table><thead><tr><th>六角形</th><th>現在値</th><th>同じ面の標準</th><th>同じ面の標準との差</th><th>全体の標準平均</th><th>標準平均との差</th></tr></thead><tbody>"+
+    rows.map(r=>`<tr><td>(${r.i},${r.j})</td><td>${fmt(r[component],6)}</td><td>${fmt(r["std_"+component],6)}</td><td>${fmt(r[component]-r["std_"+component],6)}</td><td>${fmt(mean,6)}</td><td>${fmt(r.minus_mean[component],6)}</td></tr>`).join("")+"</tbody></table>";
+}
+$("rotationComparisonComponent").onchange=paintRotationComparison;paintRotationComparison();
+const interaction=D.spin_interactions;
+if(interaction){
+  $("interactionNote").textContent=interaction.available===false?"算定保留："+interaction.reason:interaction.note;
+  const names={antiferro_tri_hex:"三角形と六角形",ferro_tri_tri:"三角形同士",ferro_hex_hex:"六角形同士",quadrupole:"4面の積"};
+  $("interactionValues").innerHTML="<table><thead><tr><th>対象</th><th>組数</th><th>現在の積の合計</th><th>標準の積の合計</th><th>差の合計</th></tr></thead><tbody>"+
+    Object.entries(interaction.types).map(([key,row])=>`<tr><td>${names[key]||key}</td><td>${row.count}</td><td>${fmt(row.now,6)}</td><td>${fmt(row.standard,6)}</td><td>${fmt(row.diff,6)}</td></tr>`).join("")+"</tbody></table>";
+}else $("interactionCard").hidden=true;
 function showRot(r){
   const rows=[["時計回りの回転量",fmt(r.cw,3)],["反時計回りの回転量",fmt(r.ccw,3)],["正味（時計回り − 反時計回り）",fmt(r.net,3)]];
   for(const [key,label] of Object.entries(COMPONENTS)){
@@ -417,7 +441,7 @@ function show(e){
   traceEdge(e.id);
   const q=e.q, rows=[["向き",`${e.road} ${RN[e.road]}`],["流量 V",fmt(q.V,2)],[(D.cmp_label||"操作の前")+"の流量",fmt(q.V_before,2)],["説明できない分",fmt(q.unexplained,2)],["規格化した流れ J",fmt(q.J,3)],
     ["直進成分",fmt(q.J_straight,3)+(e.complete?"":"（格子の端で計算しきれない）")],["臨界量 ε*",fmt(q.eps_star,3)],["臨界量に対する比",fmt(q.ratio,3)],
-    ["分布の値 f",fmt(q.f,4)],["臨界交通量 c（標準状態の交通量）",fmt(q.capacity,2)],["臨界交通量に対する比",fmt(q.usage,3)],["標準状態からのずれ",fmt(q.dev_std,2)],
+    ["増加型の分布値 f（大きさだけで良否を判定しない）",fmt(q.f,4)],["臨界交通量 c（標準状態の交通量）",fmt(q.capacity,2)],["臨界交通量に対する比",fmt(q.usage,3)],["同じ素辺の標準との差",fmt(q.dev_std,2)],
     ...["m","L","v","T","mu"].map(k=>[`${D.profile_info.parameters[k].label} ${k} [${D.profile_info.parameters[k].unit}]`,fmt(q[k],3)])];
   $("detail").innerHTML=`<strong>${e.id}</strong>${e.inner?"":" <span class='tag'>余白</span>"}<dl>`+rows.filter(r=>r[1]!=="–").map(r=>`<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join("")+"</dl>";
 }

@@ -1,4 +1,4 @@
-"""Browser-only transport adapter. Numerical modules are copied without edits."""
+"""Browser transport adapter. Uses the same release calculation code as Python."""
 import contextlib
 import copy
 import csv

@@ -2,7 +2,9 @@
   'use strict';
   const base=new URL('./',location.href);
   const originalFetch=window.fetch.bind(window);
-  const worker=new Worker(new URL('./worker.mjs',base),{type:'module'});
+  const version=globalThis.KAGOME_WEB_VERSION||'1.0.1';
+  const asset=name=>new URL(name+'?v='+encodeURIComponent(version),base);
+  const worker=new Worker(asset('./worker.mjs'),{type:'module'});
   let serial=0;const pending=new Map();
   worker.onmessage=({data})=>{if(data.type==='progress'){document.getElementById('webLoadingText').textContent=data.message;return;}const callback=pending.get(data.id);if(!callback)return;pending.delete(data.id);data.error?callback.reject(Error(data.error)):callback.resolve(data.value);};
   worker.onerror=event=>{const error=Error(event.message||'計算環境を起動できませんでした。');for(const callback of pending.values())callback.reject(error);pending.clear();};
@@ -18,7 +20,7 @@
   };
   async function boot(){
     if(!('serviceWorker'in navigator))throw Error('このブラウザでは実行できません。最新のChrome、Edge、Firefox、SafariでHTTPSのURLを開いてください。');
-    const registration=await navigator.serviceWorker.register(new URL('./sw.js',base),{scope:base.pathname});
+    const registration=await navigator.serviceWorker.register(new URL('./sw.js',base),{scope:base.pathname,updateViaCache:'none'});
     await navigator.serviceWorker.ready;
     if(!navigator.serviceWorker.controller)await new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}));
     await call('ready');
@@ -26,7 +28,7 @@
     const sessionKey='kagome-web-session-'+INITIAL_PROFILE;
     const previousSession=sessionStorage.getItem(sessionKey);
     if(previousSession)sessionStorage.setItem('kagome-session',previousSession);else sessionStorage.removeItem('kagome-session');
-    const script=document.createElement('script');script.src=new URL('./assets/editor.js',base);script.onload=()=>document.getElementById('webLoading').remove();script.onerror=()=>showError(Error('操作画面を読み込めませんでした'));document.head.append(script);
+    const script=document.createElement('script');script.src=asset('./assets/editor.js');script.onload=()=>document.getElementById('webLoading').remove();script.onerror=()=>showError(Error('操作画面を読み込めませんでした'));document.head.append(script);
     window.addEventListener('pagehide',()=>{const id=sessionStorage.getItem('kagome-session');if(id)sessionStorage.setItem(sessionKey,id);});
     const localLabel=document.querySelector('.local-label');if(localLabel)localLabel.title='入力・結果はこの端末のブラウザに保存します。他の端末とは共有されません。';
   }

@@ -12,9 +12,12 @@ from .model import KagomeModel, TURNS
 TOL = 1e-6
 
 
-def check(m: KagomeModel, need=("m", "L"), mode="observe", norm="m", inflow=None):
+def check(m: KagomeModel, need=("m", "L"), mode="observe", norm="m", inflow=None, theta=0.5):
     """need: 必ず要る素辺の値。mode="observe" なら流量 V も要り、交差点の出入りの釣り合いを見る。"""
     out = []
+    valid_theta = math.isfinite(theta) and 0 < theta < 1
+    if not valid_theta:
+        out.append(("error", "theta", "θは0より大きく1より小さい有限数が必要"))
     need = list(need) + (["V"] if mode == "observe" else []) + (["v"] if norm in ("mvl", "k") else [])
     # 素辺の値
     for e in m.edges:
@@ -33,6 +36,13 @@ def check(m: KagomeModel, need=("m", "L"), mode="observe", norm="m", inflow=None
                 out.append(("error", e, f"流量が負（{x}）"))
         if ev.T is not None and ev.T <= 0:
             out.append(("error", e, f"温度 T は正の値（{ev.T}）"))
+        if ev.mu is not None and ev.mu <= 0:
+            out.append(("error", e, "臨界基準μは正の値が必要"))
+        if valid_theta and ev.mu is not None and ev.T is not None:
+            try:
+                m.critical_level(ev.mu, ev.T, theta, require_positive=True)
+            except ValueError as error:
+                out.append(("error", e, str(error)))
     # 分岐の割合
     for node in m.nodes:
         for r in _in_roads(node):

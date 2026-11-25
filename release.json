@@ -1,0 +1,13 @@
+{
+  "application_version": "1.0.1",
+  "definition_revision": "kagome-source-routing-20261125.2",
+  "formula_changes": true,
+  "basic_rotation_formula_changed": false,
+  "changes": [
+    "同じ面の標準との差と全体の標準平均との差を併記",
+    "増加型の分布値と仮のスピン積の意味を明示",
+    "0以下の臨界量を容量として使う入力を停止",
+    "標準回転が0の仮スピン積を算定保留",
+    "5分の操作例と説明用台本を追加"
+  ]
+}

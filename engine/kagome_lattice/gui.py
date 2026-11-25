@@ -11,6 +11,7 @@ import sys
 import uuid
 import webbrowser
 import zipfile
+from urllib.parse import urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .io import EDGE_COLS, BRANCH_COLS, ENTRANCE_COLS
@@ -173,11 +174,11 @@ def serve(profile=None, port=0, root=None, open_browser=True):
         def do_GET(self):
             if self.headers.get("Host") != f"127.0.0.1:{self.server.server_port}":
                 return self.reply({"error": "接続先が不正です"}, 403)
-            if self.path == "/":
+            if urlsplit(self.path).path == "/":
                 page = (Path(__file__).parent / "editor.html").read_text(encoding="utf-8")
                 page = page.replace("__TOKEN__", token).replace("__PROFILE__", profile or 'auto')
                 return self.reply(page.encode(), content_type="text/html; charset=utf-8")
-            if self.path in ("/guide.html", "/principles.html", "/usage.html"):
+            if self.path in ("/guide.html", "/principles.html", "/usage.html", "/demonstration.html"):
                 return self.reply((Path(__file__).parent / self.path[1:]).read_bytes(), content_type="text/html; charset=utf-8")
             if self.path in ("/assets/editor.css", "/assets/editor.js"):
                 name = self.path.rsplit("/", 1)[1]

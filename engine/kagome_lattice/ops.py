@@ -20,13 +20,7 @@ EPS = 1e-9
 
 def edge_capacity(m: KagomeModel, theta: float = 0.5, mode: str = "m") -> Dict[EdgeKey, float]:
     """素辺の容量 c_e ＝ 臨界量 ε*（f = θ）を流量の単位に戻したもの。"""
-    import math
-    out = {}
-    for e in m.edges:
-        ev = m.values[e]
-        es = ev.mu + ev.T * math.log(theta / (1.0 - theta))
-        out[e] = es * m.denormalize_factor(e, mode)
-    return out
+    return m.capacity(theta=theta, mode=mode)
 
 
 # ═══════════════════════════════════════════════════════════

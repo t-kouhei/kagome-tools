@@ -9,7 +9,10 @@ import zipfile
 ROOT = Path(__file__).resolve().parent.parent
 manifest = json.loads((ROOT / 'source-manifest.json').read_text(encoding='utf-8'))
 origin = json.loads((ROOT / 'source-origin.json').read_text(encoding='utf-8'))
-assert manifest['files'] == origin['files'], 'Original application files changed; review the formula version before publishing.'
+approved = json.loads((ROOT / 'release-source.json').read_text(encoding='utf-8'))
+assert manifest['files'] == approved['files'], 'Application files differ from the reviewed release snapshot.'
+assert manifest['files']['_engine.py'] == origin['files']['_engine.py'], 'Basic lattice rotation engine changed.'
+assert manifest['definition_revision'] == 'kagome-source-routing-20261125.2'
 for name, digest in manifest['files'].items():
     path = ROOT / 'engine' / 'kagome_lattice' / name
     assert hashlib.sha256(path.read_bytes()).hexdigest() == digest, name
@@ -34,7 +37,7 @@ class Links(HTMLParser):
             assert path.exists(), value
 
 
-for name in ('index.html', 'app.html', 'usage.html', 'principles.html', 'guide.html'):
+for name in ('index.html', 'app.html', 'usage.html', 'principles.html', 'guide.html', 'demonstration.html'):
     Links().feed((ROOT / name).read_text(encoding='utf-8'))
-assert 'formula_changes' in manifest and manifest['formula_changes'] is False
-print(f'PASS: {len(manifest["files"])} original application files, package contents, Python syntax, and public HTML links.')
+assert manifest['basic_rotation_formula_changed'] is False
+print(f'PASS: {len(manifest["files"])} release files, unchanged lattice engine, package contents, Python syntax, and public HTML links.')

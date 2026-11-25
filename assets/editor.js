@@ -8,6 +8,7 @@ let state,info,selected=0,baseline=null,baselineName='',busy=false,dirty=false;
 let history=[],future=[],checkpoint='',savedCheckpoint='',page=0,zoom=1,issues=[];
 const pageSize=60;
 let currentSweepId=null,sweepTimer=null,sweepRunning=false,sweepCancelable=false,exampleCatalog=[];
+let demonstrationStage=0,demonstrationExpected='';
 $('profile').value=INITIAL_PROFILE==='auto'?'patent':INITIAL_PROFILE;
 let sessionId=null,draftReady=false,draftRevision=0,draftSerial='',draftPending=null,draftTimer=null,draftSending=false,lastResult=null;
 
@@ -16,6 +17,7 @@ async function api(path,data){const response=await fetch('/api/'+path,{method:'P
 function updateControls(){
   $('compare').disabled=busy||!baseline;$('compare').title=baseline?'変更前と現在の入力を比較します':'先に変更前の入力を固定してください';
   $('undo').disabled=busy||!history.length;$('redo').disabled=busy||!future.length;
+  if($('demoNext'))$('demoNext').disabled=busy||demonstrationStage>=4;
   if(!state)return;
   updateSweepControls();
   for(const k of ['global_rule','local_rule'])$(k).disabled=busy||state.mode==='observe';
@@ -105,14 +107,21 @@ function validate(){
     if(key==='V'&&state.mode!=='observe')continue;
     if(blank){if(required)add('edges',index,key,`${key}が未入力です`);continue;}
     if(!Number.isFinite(value))add('edges',index,key,`${key}に有限の数値を入力してください`);
-    else if(['m','L','v','T'].includes(key)&&value<=0)add('edges',index,key,`${key}は正の値で入力してください`);
+    else if(['m','L','v','T','mu'].includes(key)&&value<=0)add('edges',index,key,`${key}は正の値で入力してください`);
     else if(key==='V'&&value<0)add('edges',index,key,'Vは0以上で入力してください');
   }
   for(const [index,row]of state.tables.branching.entries()){
     const nums=['S','R','L'].map(key=>row[key]===''?NaN:Number(row[key]));if(nums.some(v=>!Number.isFinite(v)||v<0)||Math.abs(nums.reduce((a,b)=>a+b,0)-1)>1e-6)add('branching',index,'branch','S・R・Lは0以上、合計1にそろえてください');
   }
   if(state.mode==='propagate')for(const [index,row]of state.tables.entrances.entries())if(row.inflow===''||!Number.isFinite(Number(row.inflow))||Number(row.inflow)<0)add('entrances',index,'inflow','流入量は0以上の数値を入力してください');
-  if(!(Number(state.theta)>0&&Number(state.theta)<1))add('settings',0,'theta','θは0と1の間にしてください');
+  const theta=Number(state.theta),validTheta=Number.isFinite(theta)&&theta>0&&theta<1;
+  if(!validTheta)add('settings',0,'theta','θは0と1の間にしてください');
+  if(validTheta)for(const [index,row]of state.tables.edges.entries()){
+    if(row.mu===''||row.T==='')continue;const mu=Number(row.mu),T=Number(row.T);
+    if(!Number.isFinite(mu)||!Number.isFinite(T)||mu<=0||T<=0)continue;
+    const critical=mu+T*(Math.log(theta)-Math.log1p(-theta));
+    if(!Number.isFinite(critical)||critical<=0)add('edges',index,'mu','臨界量ε*が0以下または非有限です。μ・T・θを変更してください（基本設定θ=0.5）');
+  }
   $('validationBadge').textContent=issues.length?`入力の確認 ${issues.length}件`:'基本入力にエラーなし';$('validationBadge').className='tag '+(issues.length?'error':'ok');$('validationPanel').hidden=!issues.length;$('validationTitle').textContent=`${issues.length}件の入力を確認してください`;
   $('validationIssues').replaceChildren(...issues.slice(0,12).map(issue=>{const li=document.createElement('li'),button=document.createElement('button');const row=state.tables[issue.table]?.[issue.index];button.textContent=`${row?keyName(row):'計算設定'}：${issue.message}`;button.onclick=()=>{if(issue.table==='settings'){$('theta').focus();return;}$('table').value=issue.table;$('tableSearch').value='';$('linkedRows').checked=false;page=Math.floor(issue.index/pageSize);grid();$('dataSection').scrollIntoView({behavior:'smooth'});$('grid').querySelector(`[aria-label="${issue.table}-${issue.index}-${issue.key==='branch'?'S':issue.key}"]`)?.focus();};li.append(button);return li;}));
   if(issues.length>12){const li=document.createElement('li');li.textContent=`ほか${issues.length-12}件。同じ項目の一括入力も利用できます。`;$('validationIssues').append(li);}
@@ -257,4 +266,29 @@ $('sweepRun').onclick=()=>action(async()=>{
   const document=await api('sweep',{state:clone(state),request});await showSweep(document.id,document);await list();status('開始時の入力を固定して、一括比較を始めました。進捗は「条件を振って一括比較」で確認できます。');queueDraft();
 });
 $('sweepCancel').onclick=()=>action(async()=>{if(currentSweepId){const document=await api('sweep-cancel',{id:currentSweepId});await showSweep(currentSweepId,document);}});
+function setupDemonstration(){
+  const panel=document.createElement('details');panel.id='demonstrationPanel';panel.className='panel';
+  panel.innerHTML='<summary style="font-weight:700;font-size:18px">5分の操作例：Vだけを変えて比較する</summary><p class="hint">一様な合成入力を使い、現在値と2つの標準との差を読みます。既存の保存ケースは残します。</p><p id="demoInstruction" role="status"></p><div class="button-row"><button id="demoNext" class="primary"></button><button id="demoRestart" class="secondary">手順を最初に戻す</button><a class="secondary button-link" href="./demonstration.html" target="_blank" rel="noopener">説明用の台本 ↗</a></div>';
+  $('setup').before(panel);
+  const captions=['一様な入力を用意','解析して変更前を固定','流量を2400へ変更','変更前後を比較','実演完了'];
+  const instructions=['① m=2、V=1600、μ=1000の一様な例を用意します。開始時に現在の編集内容を置き換えます。','② 解析し、基準の入力を固定します。六角形は右600・左360・正味240、標準の正味300との差は−60です。','③ Vだけを1600から2400へ変えます。本数・長さ・速度・分岐・μ・Tを保ちます。','④ 変更前後を比較します。正味回転は240→360、標準との差は−60→＋60になります。','⑤ 結果を確認してください。容量比は80%→120%。良否の判定は用途側で定めます。ZIPで入力・比較結果・計算の版を保存できます。'];
+  function paint(){ $('demoNext').textContent=captions[demonstrationStage];$('demoInstruction').textContent=instructions[demonstrationStage];updateControls(); }
+  $('demoRestart').onclick=()=>{demonstrationStage=0;demonstrationExpected='';paint();};
+  $('demoNext').onclick=()=>action(async()=>{
+    if(demonstrationStage>0&&JSON.stringify(sync())!==demonstrationExpected)throw Error('操作例の条件が変更されています。「手順を最初に戻す」から再開してください。');
+    if(demonstrationStage===0){
+      if(!acceptReplace('現在の未保存の編集を、操作例の一様な入力で置き換えますか？'))return;
+      const incoming=await api('tutorial',{profile:state.profile});incoming.name='5分実演：Vを1600から2400へ';await replaceState(incoming);
+    }else if(demonstrationStage===1){
+      const result=await api('run',{state:clone(sync())});await displayResult(result);baseline=result.id;baselineName=state.name;$('baseLabel').textContent='変更前を固定：'+baselineName;await list();
+    }else if(demonstrationStage===2){
+      for(const row of state.tables.edges)row.V='2400';changed();await refresh();
+    }else if(demonstrationStage===3){
+      const result=await api('run',{state:clone(sync()),baseline});await displayResult(result);await list();$('resultsSection').scrollIntoView({behavior:'smooth'});
+    }
+    demonstrationStage++;demonstrationExpected=JSON.stringify(sync());paint();status(instructions[demonstrationStage]);
+  });
+  panel.open=new URLSearchParams(location.search).get('demo')==='flow';paint();
+}
+setupDemonstration();
 action(startup);

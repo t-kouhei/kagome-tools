@@ -297,10 +297,26 @@ class KagomeModel:
     # ─── P3 臨界点（フェルミ・ディラック） ──────────────
     @staticmethod
     def fermi_dirac(eps: float, mu: float, T: float) -> float:
+        if not all(math.isfinite(x) for x in (eps, mu, T)) or T <= 0:
+            raise ValueError("分布の入力は有限数、分布の幅Tは正の値が必要")
         x = -(eps - mu) / T
         if x > 700:
             return 0.0
         return 1.0 / (1.0 + math.exp(x))
+
+    @staticmethod
+    def critical_level(mu: float, T: float, theta: float = 0.5, *, require_positive=False) -> float:
+        """分布の逆関数。容量に使う場合だけ、正の有限な臨界量を要求する。"""
+        if mu is None or T is None or not all(math.isfinite(x) for x in (mu, T, theta)):
+            raise ValueError("μ・T・θは有限数で入力してください")
+        if T <= 0 or not 0 < theta < 1:
+            raise ValueError("Tは正、θは0より大きく1より小さい値にしてください")
+        value = mu + T * (math.log(theta) - math.log1p(-theta))
+        if not math.isfinite(value):
+            raise ValueError("臨界量ε*が有限になりません。μ・T・θの範囲を確認してください")
+        if require_positive and value <= 0:
+            raise ValueError("臨界量ε*が0以下のため、正の容量・標準流量を定義できません。μ・T・θを変更してください（基本設定θ=0.5）")
+        return value
 
     def critical(self, eps: Dict[EdgeKey, float], theta: float = 0.5) -> Dict[EdgeKey, dict]:
         """各素辺の分布の値 f、臨界量 ε*（f = θ となる ε）、臨界量までの余裕 ε* − ε と比 ε/ε*。
@@ -316,10 +332,11 @@ class KagomeModel:
                 raise ValueError(f"温度とフェルミ準位が未入力: {e}")
             if ev.T <= 0:
                 raise ValueError(f"温度は正の値: {e}")
-            es = ev.mu + ev.T * math.log(theta / (1.0 - theta))
+            es = self.critical_level(ev.mu, ev.T, theta)
             x = eps[e]
             out[e] = {"eps": x, "f": self.fermi_dirac(x, ev.mu, ev.T), "eps_star": es,
-                      "margin": es - x, "ratio": (x / es) if es != 0 else float("nan")}
+                      "margin": es - x, "ratio": (x / es) if es > 0 else None,
+                      "threshold_status": "positive" if es > 0 else "outside_nonnegative_range"}
         return out
 
     # ─── P4 道路インフラ限界 ────────────────────────────
@@ -328,8 +345,12 @@ class KagomeModel:
         out = {}
         for e in self.edges:
             ev = self.values[e]
-            es = ev.mu + ev.T * math.log(theta / (1.0 - theta))
-            out[e] = es * self.denormalize_factor(e, mode)
+            es = self.critical_level(ev.mu, ev.T, theta, require_positive=True)
+            factor = self.denormalize_factor(e, mode)
+            value = es * factor
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError(f"容量は正の有限数が必要: {e}")
+            out[e] = value
         return out
 
     # ─── 標準状態（資料 p.13・p.16） ──────────────────────

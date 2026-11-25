@@ -1,6 +1,8 @@
 import {loadPyodide} from 'https://cdn.jsdelivr.net/pyodide/v314.0.8/full/pyodide.mjs';
 
 let pyodide;
+const version=new URL(import.meta.url).searchParams.get('v')||'1.0.1';
+const releaseAsset=name=>name+'?v='+encodeURIComponent(version);
 const published = new Map();
 const filesDB = new Promise((resolve,reject)=>{
   const req=indexedDB.open('kagome-web-results-v1',1);
@@ -25,10 +27,10 @@ const ready=(async()=>{
   pyodide=await loadPyodide();
   progress('数値計算ライブラリを読み込んでいます…');
   await pyodide.loadPackage(['numpy','scipy']);
-  const response=await fetch('./engine.zip');if(!response.ok)throw Error('計算コードを読み込めませんでした');
+  const response=await fetch(releaseAsset('./engine.zip'));if(!response.ok)throw Error('計算コードを読み込めませんでした');
   pyodide.FS.mkdirTree('/app');pyodide.unpackArchive(await response.arrayBuffer(),'zip',{extractDir:'/app'});
   pyodide.FS.mkdirTree('/persist');pyodide.FS.mount(pyodide.FS.filesystems.IDBFS,{},'/persist');
-  const adapter=await fetch('./browser_adapter.py');if(!adapter.ok)throw Error('ブラウザ用の接続コードを読み込めませんでした');
+  const adapter=await fetch(releaseAsset('./browser_adapter.py'));if(!adapter.ok)throw Error('ブラウザ用の接続コードを読み込めませんでした');
   pyodide.FS.writeFile('/app/browser_adapter.py',await adapter.text());
   await storageLock(async()=>{await sync(true);await pyodide.runPythonAsync("import sys\nsys.path.insert(0, '/app')\nimport browser_adapter");await sync(false);await mirrorFiles();});
   return true;

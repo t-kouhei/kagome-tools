@@ -166,9 +166,7 @@ def _run(m, inflow, a, outdir, ref=None, quiet=False, changes=None):
     ref: 比べる相手の流量 {"V": {素辺: 値}, "label": 名前}（シナリオでもとの条件と比べるとき）
     """
     mode = "propagate" if inflow is not None else "observe"
-    issues = check(m, mode=mode, norm=a.norm, inflow=inflow)
-    if not math.isfinite(a.theta) or not 0 < a.theta < 1:
-        issues.append(("error", "theta", "臨界点θは0より大きく1より小さい有限数が必要"))
+    issues = check(m, mode=mode, norm=a.norm, inflow=inflow, theta=a.theta)
     for s, where, msg in issues:
         print(f"[{s}] {where}: {msg}")
     if any(s == "error" for s, _, _ in issues):
@@ -189,6 +187,9 @@ def _run(m, inflow, a, outdir, ref=None, quiet=False, changes=None):
               "global_rule": a.global_rule, "local_rule": a.local_rule}
 
     have_fd = all(m.values[e].T is not None and m.values[e].mu is not None for e in m.edges)
+    if have_fd and a.eps == "straight":
+        issues.append(("warning", "eps", "分布は直進成分で評価しています。容量・標準状態は規格化量Jから作るため、標準状態の直進成分の分布値がθになるとは限りません。"))
+        report["issues"] = [[s, str(w), msg] for s, w, msg in issues]
     report["guarantee"] = calculation_basis(a, mode, have_fd)
     V, V_raw, final = None, None, m
     ops, est = {}, None
@@ -302,7 +303,10 @@ def _run(m, inflow, a, outdir, ref=None, quiet=False, changes=None):
         T_std = m.direction_totals(std["V"])
         T_diff = {d: T_now[d] - T_std[d] for d in T_std}
         report["standard"] = {
-            "definition": "全ての素辺を渋滞臨界状態（f = θ）とした状態（資料 p.16）",
+            "definition": "全ての素辺の規格化量Jを臨界量に置く比較基準（f(J) = θ）。直進成分で分布を評価する場合、その分布値がθになるとは限らない。",
+            "distribution_matches_standard": a.eps == "total",
+            "standard_quantity": "J",
+            "distribution_quantity": a.eps,
             "status": "reference", "note": STANDARD_NOTE,
             "direction_total_now": T_now, "direction_total_standard": T_std,
             "direction_total_minus_standard": T_diff,
@@ -321,14 +325,16 @@ def _run(m, inflow, a, outdir, ref=None, quiet=False, changes=None):
         # 4 種のスピン相互作用（資料 p.13・p.16）と 8 頂点模型（資料 p.17）。先生の式が出るまでの暫定の形
         si = spin_interactions(m, dec, std["dec"])
         report["standard"]["spin_interactions"] = {
-            "status": PROVISIONAL, "note": SPIN_NOTE,
+            "status": si["status"], "available": si["available"], "reason": si["reason"], "note": SPIN_NOTE,
             "trace_file": "spin_interaction_trace.json",
             "scale": si["scale"], "types": si["types"]}
         write_json(os.path.join(outdir, "spin_interaction_trace.json"), si["trace"])
         write_csv(os.path.join(outdir, "interactions.csv"),
                   ["type", "name", "shapes", "q_now", "q_standard", "q_minus_standard", "status"],
                   [[k, INTERACTION_NAMES[k], " ".join("".join(map(str, x)) if isinstance(x, tuple) else str(x) for x in g),
-                    round(qn, 6), round(qs, 6), round(qn - qs, 6), PROVISIONAL] for k, g, qn, qs in si["rows"]])
+                    round(qn, 6) if qn is not None else None, round(qs, 6) if qs is not None else None,
+                    round(qn - qs, 6) if qn is not None and qs is not None else None,
+                    si["status"]] for k, g, qn, qs in si["rows"]])
         vx = vertices(m, Vfin, std["V"])
         report["vertex_model"] = {"status": PROVISIONAL, "note": VERTEX_NOTE,
                                   "names": VERTEX_NAMES, "now": vx["now"], "standard": vx["standard"],
@@ -380,8 +386,9 @@ def _run(m, inflow, a, outdir, ref=None, quiet=False, changes=None):
                                                        round(v - sd["sigma"][(sg, i, j)], 6)] if sd else [])
                for (sg, i, j), v in sorted(dec["sigma"].items())])
     write_csv(os.path.join(outdir, "hex_rotation.csv"),
-              ["i", "j", "component", "now", "standard_mean", "minus_standard_mean"],
-              [[i, j, k, round(v, 6), round(hex_mean[k], 6), round(row["difference"][k], 6)]
+              ["i", "j", "component", "now", "standard_mean", "minus_standard_mean", "own_standard", "minus_own_standard"],
+              [[i, j, k, round(v, 6), round(hex_mean[k], 6), round(row["difference"][k], 6),
+                round(row["standard"][k], 6), round(row["minus_own_standard"][k], 6)]
                for (i, j), row in hex_rows.items() for k, v in row["now"].items()])
     direction_columns = ["edges", "now", "standard", "difference", "ratio", "over_capacity_edges", "excess_total"]
     write_csv(os.path.join(outdir, "direction_comparison.csv"),
@@ -471,8 +478,11 @@ def _run(m, inflow, a, outdir, ref=None, quiet=False, changes=None):
                 print(f"  ローカル：{'すべての素辺が容量以内' if lo['resolved'] else '容量を超えた素辺が ' + str(len(lo['remaining'])) + ' 本残った（' + lo['stop_reason'] + '）'}{extra}")
         st = report.get("standard", {}).get("spin_interactions")
         if st:
-            parts = "・".join(f"{INTERACTION_SHORT[k]} {v['diff_abs']:.1f}" for k, v in st["types"].items())
-            print(f"  暫定：標準状態からのずれ（スピン相互作用、型ごとの差の総量）：{parts} → interactions.csv")
+            if st['available']:
+                parts = "・".join(f"{INTERACTION_SHORT[k]} {v['diff_abs']:.1f}" for k, v in st["types"].items())
+                print(f"  参考：仮のスピン積の標準との差（良否判定には使わない）：{parts} → interactions.csv")
+            else:
+                print(f"  参考：仮のスピン積は算定保留。{st['reason']} → interactions.csv")
             vm = report["vertex_model"]
             print(presentation_text(
                 f"  暫定：8 頂点模型の型が標準状態と違う交差点 {vm['changed']} / {vm['nodes']} か所 → vertices.csv", a.profile))
