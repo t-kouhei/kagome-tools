@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+qa-output/
+engine.zip
+desktop-tool.zip
+node_modules/
+_site/
