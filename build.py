@@ -51,7 +51,7 @@ def build():
             document = document.replace('href="/' + target, 'href="./' + target)
         document = document.replace('</head>', '<link rel="icon" href="./icon.svg"></head>', 1)
         if name == 'usage.html':
-            document = document.replace('<main id="main">', '<main id="main"><div style="padding:18px;background:#e7f2ef;border-radius:12px;margin-bottom:20px"><strong>ブラウザ版の使い方</strong><p>公開URLから起動できます。下記のWindows用起動操作はPython版向けです。画面の入力・解析・比較は共通です。入力と結果はこのブラウザに保存され、他の端末へは自動同期されません。大切なデータはJSON・ZIPでも保存してください。</p><a href="./">ツール一覧へ戻る</a></div>')
+            document = document.replace('<main id="main">', '<main id="main"><div class="callout"><strong>ブラウザ版の使い方</strong><p>公開URLから起動できます。下記のWindows用起動操作はPython版向けです。画面の入力・解析・比較は共通です。入力と結果はこのブラウザに保存され、他の端末へは自動同期されません。大切なデータはJSON・ZIPでも保存してください。</p><a href="./">ツール一覧へ戻る</a></div>')
         (ROOT / name).write_text(document, encoding='utf-8')
     page = page.replace('ローカルワークスペース', 'ブラウザ内ワークスペース')
     page = page.replace('<div class="sidebar-bottom">', '<div class="sidebar-bottom"><a href="./specification.html" target="_blank" rel="noopener">仕様書（はじめから読む） ↗</a>', 1)
